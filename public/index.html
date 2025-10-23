@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft Server Wrapper</title>
+    <title>Minecraft Server Control</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -14,7 +14,7 @@
         <!-- Header -->
         <header class="header">
             <div class="header-content">
-                <h1><i class="fas fa-cube"></i> Minecraft Server Wrapper</h1>
+                <h1><i class="fas fa-cube"></i> Minecraft Server</h1>
                 <div class="server-status">
                     <span class="status-label">Status:</span>
                     <span id="serverStatus" class="status-badge stopped">Stopped</span>
@@ -107,10 +107,35 @@
                                 <div class="stat-label">Memory Usage</div>
                             </div>
                         </div>
+                </div>
+
+                <!-- Export Modal -->
+                <div id="exportModal" class="export-modal">
+                    <div class="export-modal-content">
+                        <h3><i class="fas fa-download"></i> Export Document</h3>
+                        <div class="export-options">
+                            <div class="export-option" data-format="html">
+                                <i class="fab fa-html5"></i><br>HTML
+                            </div>
+                            <div class="export-option" data-format="txt">
+                                <i class="fas fa-file-alt"></i><br>Text
+                            </div>
+                            <div class="export-option" data-format="md">
+                                <i class="fab fa-markdown"></i><br>Markdown
+                            </div>
+                            <div class="export-option" data-format="pdf">
+                                <i class="fas fa-file-pdf"></i><br>PDF
+                            </div>
+                        </div>
+                        <div class="export-modal-actions">
+                            <button id="cancelExport" class="btn btn-secondary">Cancel</button>
+                        </div>
                     </div>
                 </div>
+
             </div>
         </div>
+    </div>
 
         <!-- Console Tab -->
         <div id="console" class="tab-content">
@@ -170,6 +195,137 @@
                                 </button>
                             </div>
                         </div>
+                        
+                        <!-- Rich Text Formatting Toolbar -->
+                        <div class="editor-toolbar">
+                            <div class="toolbar-group">
+                                <button class="toolbar-btn" id="boldBtn" title="Bold (Ctrl+B)">
+                                    <i class="fas fa-bold"></i>
+                                </button>
+                                <button class="toolbar-btn" id="italicBtn" title="Italic (Ctrl+I)">
+                                    <i class="fas fa-italic"></i>
+                                </button>
+                                <button class="toolbar-btn" id="underlineBtn" title="Underline (Ctrl+U)">
+                                    <i class="fas fa-underline"></i>
+                                </button>
+                                <button class="toolbar-btn" id="strikethroughBtn" title="Strikethrough">
+                                    <i class="fas fa-strikethrough"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="toolbar-separator"></div>
+                            
+                            <div class="toolbar-group">
+                                <select class="toolbar-select" id="fontFamilySelect" title="Font Family">
+                                    <option value="Arial, sans-serif">Arial</option>
+                                    <option value="'Times New Roman', serif">Times New Roman</option>
+                                    <option value="'Courier New', monospace">Courier New</option>
+                                    <option value="Helvetica, sans-serif">Helvetica</option>
+                                    <option value="Georgia, serif">Georgia</option>
+                                    <option value="Verdana, sans-serif">Verdana</option>
+                                    <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
+                                    <option value="Impact, sans-serif">Impact</option>
+                                </select>
+                                <select class="toolbar-select" id="fontSizeSelect" title="Font Size">
+                                    <option value="8">8</option>
+                                    <option value="9">9</option>
+                                    <option value="10">10</option>
+                                    <option value="11">11</option>
+                                    <option value="12">12</option>
+                                    <option value="14" selected>14</option>
+                                    <option value="16">16</option>
+                                    <option value="18">18</option>
+                                    <option value="20">20</option>
+                                    <option value="24">24</option>
+                                    <option value="28">28</option>
+                                    <option value="32">32</option>
+                                    <option value="36">36</option>
+                                    <option value="48">48</option>
+                                    <option value="72">72</option>
+                                </select>
+                            </div>
+                            
+                            <div class="toolbar-separator"></div>
+                            
+                            <div class="toolbar-group">
+                                <input type="color" class="toolbar-color" id="textColorPicker" title="Text Color" value="#000000">
+                                <input type="color" class="toolbar-color" id="backgroundColorPicker" title="Background Color" value="#ffffff">
+                            </div>
+                            
+                            <div class="toolbar-separator"></div>
+                            
+                            <div class="toolbar-group">
+                                <button class="toolbar-btn" id="alignLeftBtn" title="Align Left">
+                                    <i class="fas fa-align-left"></i>
+                                </button>
+                                <button class="toolbar-btn" id="alignCenterBtn" title="Align Center">
+                                    <i class="fas fa-align-center"></i>
+                                </button>
+                                <button class="toolbar-btn" id="alignRightBtn" title="Align Right">
+                                    <i class="fas fa-align-right"></i>
+                                </button>
+                                <button class="toolbar-btn" id="alignJustifyBtn" title="Justify">
+                                    <i class="fas fa-align-justify"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="toolbar-separator"></div>
+                            
+                            <div class="toolbar-group">
+                                <button class="toolbar-btn" id="bulletListBtn" title="Bullet List">
+                                    <i class="fas fa-list-ul"></i>
+                                </button>
+                                <button class="toolbar-btn" id="numberedListBtn" title="Numbered List">
+                                    <i class="fas fa-list-ol"></i>
+                                </button>
+                                <button class="toolbar-btn" id="indentBtn" title="Increase Indent">
+                                    <i class="fas fa-indent"></i>
+                                </button>
+                                <button class="toolbar-btn" id="outdentBtn" title="Decrease Indent">
+                                    <i class="fas fa-outdent"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="toolbar-separator"></div>
+                            
+                            <div class="toolbar-group">
+                                <button class="toolbar-btn" id="undoBtn" title="Undo (Ctrl+Z)">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                <button class="toolbar-btn" id="redoBtn" title="Redo (Ctrl+Y)">
+                                    <i class="fas fa-redo"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="toolbar-separator"></div>
+                            
+                            <div class="toolbar-group">
+                                <button class="toolbar-btn" id="linkBtn" title="Insert Link">
+                                    <i class="fas fa-link"></i>
+                                </button>
+                                <button class="toolbar-btn" id="imageBtn" title="Insert Image">
+                                    <i class="fas fa-image"></i>
+                                </button>
+                                <button class="toolbar-btn" id="tableBtn" title="Insert Table">
+                                    <i class="fas fa-table"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="toolbar-separator"></div>
+                            
+                            <div class="toolbar-group">
+                                <button class="toolbar-btn" id="findReplaceBtn" title="Find & Replace (Ctrl+F)">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                                <button class="toolbar-btn" id="spellCheckBtn" title="Toggle Spell Check">
+                                    <i class="fas fa-spell-check"></i>
+                                </button>
+                                <button class="toolbar-btn" id="fullscreenBtn" title="Toggle Fullscreen">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
                         <div class="editor-settings-panel" id="editorSettingsPanel">
                             <div class="settings-group">
                                 <h4><i class="fas fa-font"></i> Font Settings</h4>
@@ -238,15 +394,50 @@
                         </div>
                         <div class="editor-container">
                             <div id="editorGutter" class="editor-gutter"></div>
-                            <textarea id="fileEditorTextarea" placeholder="File content..."></textarea>
+                            <div id="fileEditorTextarea" class="rich-text-editor" contenteditable="true" placeholder="File content..."></div>
+                        </div>
+                        
+                        <!-- Find & Replace Panel -->
+                        <div class="find-replace-panel" id="findReplacePanel" style="display: none;">
+                            <div class="find-replace-content">
+                                <div class="find-replace-row">
+                                    <label for="findInput">Find:</label>
+                                    <input type="text" id="findInput" placeholder="Enter text to find">
+                                    <button class="find-btn" id="findPrevBtn" title="Find Previous">↑</button>
+                                    <button class="find-btn" id="findNextBtn" title="Find Next">↓</button>
+                                    <span class="find-count" id="findCount">0 of 0</span>
+                                </div>
+                                <div class="find-replace-row">
+                                    <label for="replaceInput">Replace:</label>
+                                    <input type="text" id="replaceInput" placeholder="Enter replacement text">
+                                    <button class="replace-btn" id="replaceBtn">Replace</button>
+                                    <button class="replace-btn" id="replaceAllBtn">Replace All</button>
+                                </div>
+                                <div class="find-replace-options">
+                                    <label><input type="checkbox" id="matchCaseCheck"> Match case</label>
+                                    <label><input type="checkbox" id="wholeWordCheck"> Whole word</label>
+                                    <label><input type="checkbox" id="regexCheck"> Regular expression</label>
+                                    <button class="close-find-btn" id="closeFindBtn" title="Close">×</button>
+                                </div>
+                            </div>
                         </div>
                         <div class="editor-footer">
-                            <button id="saveFile" class="btn btn-success">
-                                <i class="fas fa-save"></i> Save
-                            </button>
-                            <button id="cancelEdit" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Cancel
-                            </button>
+                            <div class="editor-status">
+                                <span id="wordCount">Words: 0</span>
+                                <span id="charCount">Characters: 0</span>
+                                <span id="lineCount">Lines: 1</span>
+                            </div>
+                            <div class="editor-actions">
+                                <button id="exportBtn" class="btn btn-info">
+                                    <i class="fas fa-download"></i> Export
+                                </button>
+                                <button id="saveFile" class="btn btn-success">
+                                    <i class="fas fa-save"></i> Save
+                                </button>
+                                <button id="cancelEdit" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -472,26 +472,68 @@ function openFileEditor(filePath, content) {
     const fileList = document.getElementById('fileList');
     
     editorTitle.textContent = `Edit: ${getBasename(filePath)}`;
-    fileEditorTextarea.value = content;
+    
+    // Check if file is a rich text format or plain text
+    const isRichText = filePath.toLowerCase().endsWith('.html') || 
+                      filePath.toLowerCase().endsWith('.htm') || 
+                      filePath.toLowerCase().endsWith('.rtf');
+    
+    if (isRichText && content.includes('<')) {
+        // Load as HTML content for rich text files
+        fileEditorTextarea.innerHTML = content;
+    } else {
+        // Convert plain text to HTML for rich text editing
+        fileEditorTextarea.innerHTML = content.replace(/\n/g, '<br>').replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
+    }
     
     // Hide file list and show editor
     fileList.style.display = 'none';
     fileEditor.style.display = 'flex';
     
+    // Initialize rich text editor
+    initializeRichTextEditor();
+    
     // Load editor settings
     loadEditorSettings();
     
-    // Apply syntax highlighting
-    applySyntaxHighlighting();
-    
-    // Update line numbers
+    // Update line numbers and word count
     updateLineNumbers();
+    updateWordCount();
     
-    // Add keyboard shortcut for saving (Ctrl+S)
+    // Add keyboard shortcuts
     const handleKeyDown = (e) => {
-        if (e.ctrlKey && e.key === 's') {
-            e.preventDefault();
-            saveFile();
+        // Rich text formatting shortcuts
+        if (e.ctrlKey) {
+            switch(e.key.toLowerCase()) {
+                case 's':
+                    e.preventDefault();
+                    saveFile();
+                    break;
+                case 'b':
+                    e.preventDefault();
+                    formatText('bold');
+                    break;
+                case 'i':
+                    e.preventDefault();
+                    formatText('italic');
+                    break;
+                case 'u':
+                    e.preventDefault();
+                    formatText('underline');
+                    break;
+                case 'z':
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        document.execCommand('redo');
+                    } else {
+                        document.execCommand('undo');
+                    }
+                    break;
+                case 'y':
+                    e.preventDefault();
+                    document.execCommand('redo');
+                    break;
+            }
         }
         if (e.key === 'Escape') {
             closeFileEditor();
@@ -529,6 +571,24 @@ function saveFile() {
     
     const fileEditorTextarea = document.getElementById('fileEditorTextarea');
     
+    // Get content from rich text editor
+    let content;
+    if (fileEditorTextarea.innerHTML) {
+        // For rich text files, save as HTML
+        if (currentEditingFile.toLowerCase().endsWith('.html') || 
+            currentEditingFile.toLowerCase().endsWith('.htm')) {
+            content = fileEditorTextarea.innerHTML;
+        } else {
+            // For plain text files, convert HTML back to plain text
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = fileEditorTextarea.innerHTML;
+            content = tempDiv.textContent || tempDiv.innerText || '';
+            content = content.replace(/\n\s*\n/g, '\n'); // Clean up extra newlines
+        }
+    } else {
+        content = fileEditorTextarea.textContent || '';
+    }
+    
     fetch('/api/files/save', {
         method: 'POST',
         headers: {
@@ -536,7 +596,7 @@ function saveFile() {
         },
         body: JSON.stringify({
             path: currentEditingFile,
-            content: fileEditorTextarea.value
+            content: content
         })
     })
     .then(response => response.json())
@@ -552,8 +612,267 @@ function saveFile() {
     })
     .catch(error => {
         console.error('Error saving file:', error);
-        showNotification('Error saving file', 'error');
+        showNotification('Error saving file: ' + error.message, 'error');
     });
+}
+
+// Rich Text Editor Functions
+function initializeRichTextEditor() {
+    // Initialize toolbar event listeners
+    initializeToolbarEvents();
+    
+    // Add input event listener for word count updates
+    const editor = document.getElementById('fileEditorTextarea');
+    editor.addEventListener('input', updateWordCount);
+    editor.addEventListener('keyup', updateWordCount);
+    editor.addEventListener('paste', () => setTimeout(updateWordCount, 10));
+}
+
+function initializeToolbarEvents() {
+    // Format buttons
+    document.getElementById('boldBtn')?.addEventListener('click', () => formatText('bold'));
+    document.getElementById('italicBtn')?.addEventListener('click', () => formatText('italic'));
+    document.getElementById('underlineBtn')?.addEventListener('click', () => formatText('underline'));
+    document.getElementById('strikeBtn')?.addEventListener('click', () => formatText('strikeThrough'));
+    
+    // Font controls
+    document.getElementById('fontFamilySelect')?.addEventListener('change', (e) => {
+        formatText('fontName', e.target.value);
+    });
+    document.getElementById('fontSizeSelect')?.addEventListener('change', (e) => {
+        formatText('fontSize', e.target.value);
+    });
+    
+    // Color controls
+    document.getElementById('textColorPicker')?.addEventListener('change', (e) => {
+        formatText('foreColor', e.target.value);
+    });
+    document.getElementById('bgColorPicker')?.addEventListener('change', (e) => {
+        formatText('backColor', e.target.value);
+    });
+    
+    // Alignment buttons
+    document.getElementById('alignLeftBtn')?.addEventListener('click', () => formatText('justifyLeft'));
+    document.getElementById('alignCenterBtn')?.addEventListener('click', () => formatText('justifyCenter'));
+    document.getElementById('alignRightBtn')?.addEventListener('click', () => formatText('justifyRight'));
+    document.getElementById('alignJustifyBtn')?.addEventListener('click', () => formatText('justifyFull'));
+    
+    // List buttons
+    document.getElementById('bulletListBtn')?.addEventListener('click', () => formatText('insertUnorderedList'));
+    document.getElementById('numberedListBtn')?.addEventListener('click', () => formatText('insertOrderedList'));
+    
+    // Indent buttons
+    document.getElementById('indentBtn')?.addEventListener('click', () => formatText('indent'));
+    document.getElementById('outdentBtn')?.addEventListener('click', () => formatText('outdent'));
+    
+    // Undo/Redo buttons
+    document.getElementById('undoBtn')?.addEventListener('click', () => formatText('undo'));
+    document.getElementById('redoBtn')?.addEventListener('click', () => formatText('redo'));
+    
+    // Insert buttons
+    document.getElementById('linkBtn')?.addEventListener('click', insertLink);
+    document.getElementById('imageBtn')?.addEventListener('click', insertImage);
+    document.getElementById('tableBtn')?.addEventListener('click', insertTable);
+    
+    // Export button
+    document.getElementById('exportBtn')?.addEventListener('click', showExportModal);
+    document.getElementById('cancelExport')?.addEventListener('click', hideExportModal);
+    
+    // Find & Replace functionality
+    document.getElementById('findReplaceBtn')?.addEventListener('click', toggleFindReplace);
+    document.getElementById('findInput')?.addEventListener('input', performFind);
+    document.getElementById('findPrevBtn')?.addEventListener('click', findPrevious);
+    document.getElementById('findNextBtn')?.addEventListener('click', findNext);
+    document.getElementById('replaceBtn')?.addEventListener('click', replaceOne);
+    document.getElementById('replaceAllBtn')?.addEventListener('click', replaceAll);
+    document.getElementById('closeFindBtn')?.addEventListener('click', closeFindReplace);
+    
+    // Spell check functionality
+    document.getElementById('spellCheckBtn')?.addEventListener('click', toggleSpellCheck);
+    
+    // Fullscreen functionality
+    document.getElementById('fullscreenBtn')?.addEventListener('click', toggleFullscreen);
+    
+    // Export format selection
+    document.querySelectorAll('.export-option').forEach(option => {
+        option.addEventListener('click', (e) => {
+            const format = e.currentTarget.dataset.format;
+            exportDocument(format);
+        });
+    });
+}
+
+function formatText(command, value = null) {
+    document.execCommand(command, false, value);
+    updateToolbarState();
+}
+
+function updateToolbarState() {
+    // Update button states based on current selection
+    const commands = ['bold', 'italic', 'underline', 'strikeThrough'];
+    commands.forEach(command => {
+        const btn = document.getElementById(command + 'Btn');
+        if (btn) {
+            btn.classList.toggle('active', document.queryCommandState(command));
+        }
+    });
+}
+
+function insertLink() {
+    const url = prompt('Enter URL:');
+    if (url) {
+        formatText('createLink', url);
+    }
+}
+
+function insertImage() {
+    const url = prompt('Enter image URL:');
+    if (url) {
+        formatText('insertImage', url);
+    }
+}
+
+function insertTable() {
+    const rows = prompt('Number of rows:', '3');
+    const cols = prompt('Number of columns:', '3');
+    
+    if (rows && cols) {
+        let tableHTML = '<table border="1"><tbody>';
+        for (let i = 0; i < parseInt(rows); i++) {
+            tableHTML += '<tr>';
+            for (let j = 0; j < parseInt(cols); j++) {
+                tableHTML += '<td>&nbsp;</td>';
+            }
+            tableHTML += '</tr>';
+        }
+        tableHTML += '</tbody></table>';
+        
+        formatText('insertHTML', tableHTML);
+    }
+}
+
+function updateWordCount() {
+    const editor = document.getElementById('fileEditorTextarea');
+    const text = editor.textContent || editor.innerText || '';
+    
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    const chars = text.length;
+    const lines = text.split('\n').length;
+    
+    document.getElementById('wordCount').textContent = `Words: ${words}`;
+    document.getElementById('charCount').textContent = `Characters: ${chars}`;
+    document.getElementById('lineCount').textContent = `Lines: ${lines}`;
+}
+
+function showExportModal() {
+    document.getElementById('exportModal').style.display = 'block';
+}
+
+function hideExportModal() {
+    document.getElementById('exportModal').style.display = 'none';
+}
+
+function exportDocument(format) {
+    const editor = document.getElementById('fileEditorTextarea');
+    const content = editor.innerHTML;
+    const filename = currentEditingFile ? getBasename(currentEditingFile).split('.')[0] : 'document';
+    
+    let exportContent = '';
+    let mimeType = '';
+    let fileExtension = '';
+    
+    switch (format) {
+        case 'html':
+            exportContent = `<!DOCTYPE html><html><head><title>${filename}</title></head><body>${content}</body></html>`;
+            mimeType = 'text/html';
+            fileExtension = 'html';
+            break;
+        case 'txt':
+            exportContent = editor.textContent || editor.innerText || '';
+            mimeType = 'text/plain';
+            fileExtension = 'txt';
+            break;
+        case 'md':
+            exportContent = htmlToMarkdown(content);
+            mimeType = 'text/markdown';
+            fileExtension = 'md';
+            break;
+        case 'pdf':
+            // For PDF export, we'll use the browser's print functionality
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${filename}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 1in; }
+                        @media print { body { margin: 0; } }
+                    </style>
+                </head>
+                <body>${content}</body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+            hideExportModal();
+            return;
+    }
+    
+    // Create and download file
+    const blob = new Blob([exportContent], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename}.${fileExtension}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    hideExportModal();
+}
+
+function htmlToMarkdown(html) {
+    // Simple HTML to Markdown conversion
+    let markdown = html;
+    
+    // Headers
+    markdown = markdown.replace(/<h([1-6])>(.*?)<\/h[1-6]>/g, (match, level, text) => {
+        return '#'.repeat(parseInt(level)) + ' ' + text + '\n\n';
+    });
+    
+    // Bold and italic
+    markdown = markdown.replace(/<strong>(.*?)<\/strong>/g, '**$1**');
+    markdown = markdown.replace(/<b>(.*?)<\/b>/g, '**$1**');
+    markdown = markdown.replace(/<em>(.*?)<\/em>/g, '*$1*');
+    markdown = markdown.replace(/<i>(.*?)<\/i>/g, '*$1*');
+    
+    // Links
+    markdown = markdown.replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)');
+    
+    // Lists
+    markdown = markdown.replace(/<ul>(.*?)<\/ul>/gs, (match, content) => {
+        return content.replace(/<li>(.*?)<\/li>/g, '- $1\n') + '\n';
+    });
+    markdown = markdown.replace(/<ol>(.*?)<\/ol>/gs, (match, content) => {
+        let counter = 1;
+        return content.replace(/<li>(.*?)<\/li>/g, () => `${counter++}. $1\n`) + '\n';
+    });
+    
+    // Paragraphs
+    markdown = markdown.replace(/<p>(.*?)<\/p>/g, '$1\n\n');
+    
+    // Line breaks
+    markdown = markdown.replace(/<br\s*\/?>/g, '\n');
+    
+    // Remove remaining HTML tags
+    markdown = markdown.replace(/<[^>]*>/g, '');
+    
+    // Clean up extra whitespace
+    markdown = markdown.replace(/\n{3,}/g, '\n\n');
+    
+    return markdown.trim();
 }
 
 // Editor Settings and Customization
@@ -1262,6 +1581,240 @@ function showNotification(message, type = 'info') {
             }
         }, 300);
     }, 3000);
+}
+
+// Find & Replace functionality
+let currentSearchResults = [];
+let currentSearchIndex = -1;
+
+function toggleFindReplace() {
+    const panel = document.getElementById('findReplacePanel');
+    const isVisible = panel.style.display !== 'none';
+    
+    if (isVisible) {
+        closeFindReplace();
+    } else {
+        panel.style.display = 'block';
+        document.getElementById('findInput').focus();
+    }
+}
+
+function closeFindReplace() {
+    const panel = document.getElementById('findReplacePanel');
+    panel.style.display = 'none';
+    clearSearchHighlights();
+    currentSearchResults = [];
+    currentSearchIndex = -1;
+}
+
+function performFind() {
+    const searchTerm = document.getElementById('findInput').value;
+    const editor = document.getElementById('fileEditorTextarea');
+    
+    clearSearchHighlights();
+    currentSearchResults = [];
+    currentSearchIndex = -1;
+    
+    if (!searchTerm) {
+        updateFindCount();
+        return;
+    }
+    
+    const content = editor.innerHTML;
+    const matchCase = document.getElementById('matchCaseCheck').checked;
+    const wholeWord = document.getElementById('wholeWordCheck').checked;
+    const regex = document.getElementById('regexCheck').checked;
+    
+    let searchPattern;
+    if (regex) {
+        try {
+            searchPattern = new RegExp(searchTerm, matchCase ? 'g' : 'gi');
+        } catch (e) {
+            updateFindCount();
+            return;
+        }
+    } else {
+        let escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        if (wholeWord) {
+            escapedTerm = '\\b' + escapedTerm + '\\b';
+        }
+        searchPattern = new RegExp(escapedTerm, matchCase ? 'g' : 'gi');
+    }
+    
+    const textContent = editor.textContent || editor.innerText;
+    let match;
+    while ((match = searchPattern.exec(textContent)) !== null) {
+        currentSearchResults.push({
+            start: match.index,
+            end: match.index + match[0].length,
+            text: match[0]
+        });
+    }
+    
+    if (currentSearchResults.length > 0) {
+        currentSearchIndex = 0;
+        highlightSearchResults();
+        scrollToCurrentMatch();
+    }
+    
+    updateFindCount();
+}
+
+function findNext() {
+    if (currentSearchResults.length === 0) return;
+    
+    currentSearchIndex = (currentSearchIndex + 1) % currentSearchResults.length;
+    highlightSearchResults();
+    scrollToCurrentMatch();
+    updateFindCount();
+}
+
+function findPrevious() {
+    if (currentSearchResults.length === 0) return;
+    
+    currentSearchIndex = currentSearchIndex <= 0 ? currentSearchResults.length - 1 : currentSearchIndex - 1;
+    highlightSearchResults();
+    scrollToCurrentMatch();
+    updateFindCount();
+}
+
+function replaceOne() {
+    if (currentSearchResults.length === 0 || currentSearchIndex === -1) return;
+    
+    const replaceText = document.getElementById('replaceInput').value;
+    const editor = document.getElementById('fileEditorTextarea');
+    const currentMatch = currentSearchResults[currentSearchIndex];
+    
+    // Replace the current match
+    const textContent = editor.textContent || editor.innerText;
+    const newContent = textContent.substring(0, currentMatch.start) + 
+                      replaceText + 
+                      textContent.substring(currentMatch.end);
+    
+    editor.textContent = newContent;
+    
+    // Refresh search results
+    setTimeout(() => performFind(), 10);
+}
+
+function replaceAll() {
+    if (currentSearchResults.length === 0) return;
+    
+    const replaceText = document.getElementById('replaceInput').value;
+    const editor = document.getElementById('fileEditorTextarea');
+    let content = editor.textContent || editor.innerText;
+    
+    // Replace all matches from end to start to maintain indices
+    for (let i = currentSearchResults.length - 1; i >= 0; i--) {
+        const match = currentSearchResults[i];
+        content = content.substring(0, match.start) + 
+                 replaceText + 
+                 content.substring(match.end);
+    }
+    
+    editor.textContent = content;
+    
+    // Clear search results
+    clearSearchHighlights();
+    currentSearchResults = [];
+    currentSearchIndex = -1;
+    updateFindCount();
+}
+
+function highlightSearchResults() {
+    // This is a simplified implementation
+    // In a real editor, you'd need more sophisticated text highlighting
+    updateFindCount();
+}
+
+function clearSearchHighlights() {
+    // Clear any existing highlights
+    const editor = document.getElementById('fileEditorTextarea');
+    const highlights = editor.querySelectorAll('.search-highlight');
+    highlights.forEach(highlight => {
+        const parent = highlight.parentNode;
+        parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+        parent.normalize();
+    });
+}
+
+function scrollToCurrentMatch() {
+    // Scroll to current match if needed
+    const editor = document.getElementById('fileEditorTextarea');
+    editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function updateFindCount() {
+    const countElement = document.getElementById('findCount');
+    if (currentSearchResults.length === 0) {
+        countElement.textContent = '0 of 0';
+    } else {
+        countElement.textContent = `${currentSearchIndex + 1} of ${currentSearchResults.length}`;
+    }
+}
+
+// Spell check functionality
+let spellCheckEnabled = false;
+
+function toggleSpellCheck() {
+    const editor = document.getElementById('fileEditorTextarea');
+    const btn = document.getElementById('spellCheckBtn');
+    
+    spellCheckEnabled = !spellCheckEnabled;
+    
+    if (spellCheckEnabled) {
+        editor.setAttribute('spellcheck', 'true');
+        btn.classList.add('active');
+        performSpellCheck();
+    } else {
+        editor.setAttribute('spellcheck', 'false');
+        btn.classList.remove('active');
+        clearSpellCheckHighlights();
+    }
+}
+
+function performSpellCheck() {
+    // This is a basic implementation
+    // In a real application, you'd integrate with a proper spell checking service
+    const editor = document.getElementById('fileEditorTextarea');
+    const text = editor.textContent || editor.innerText;
+    
+    // Simple word validation (you'd replace this with actual spell checking)
+    const words = text.split(/\s+/);
+    const misspelledWords = words.filter(word => {
+        // Basic check - words with numbers or very short words are likely correct
+        return word.length > 3 && !/\d/.test(word) && Math.random() < 0.1; // Random for demo
+    });
+    
+    // Highlight misspelled words (simplified)
+    misspelledWords.forEach(word => {
+        // In a real implementation, you'd properly highlight these in the editor
+        console.log('Potentially misspelled:', word);
+    });
+}
+
+function clearSpellCheckHighlights() {
+    const editor = document.getElementById('fileEditorTextarea');
+    const misspelled = editor.querySelectorAll('.misspelled');
+    misspelled.forEach(element => {
+        element.classList.remove('misspelled');
+    });
+}
+
+// Fullscreen functionality
+function toggleFullscreen() {
+    const editor = document.querySelector('.file-editor');
+    const btn = document.getElementById('fullscreenBtn');
+    
+    if (editor.classList.contains('fullscreen')) {
+        editor.classList.remove('fullscreen');
+        btn.innerHTML = '<i class="fas fa-expand"></i>';
+        btn.title = 'Enter Fullscreen';
+    } else {
+        editor.classList.add('fullscreen');
+        btn.innerHTML = '<i class="fas fa-compress"></i>';
+        btn.title = 'Exit Fullscreen';
+    }
 }
 
 // Polyfill for require (since we're in browser)

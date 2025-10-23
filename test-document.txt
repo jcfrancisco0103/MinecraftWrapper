@@ -1,0 +1,15 @@
+Rich Text Editor Test - Plain Text Version
+
+This is a plain text document that should be converted to rich text when opened in the editor.
+
+Features to test:
+- Bold formatting
+- Italic formatting
+- Underline formatting
+- Font changes
+- Color changes
+- Lists
+- Links
+- Tables
+
+The editor should convert this plain text to HTML format for rich text editing while preserving the original content when saving back to .txt format.
