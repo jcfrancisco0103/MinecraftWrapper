@@ -253,7 +253,7 @@ EOF
     
     # Create systemd service file
     print_info "Creating systemd service file..."
-    cat > minecraft-wrapper.service << EOF
+    cat > sproutwrapper.service << EOF
 [Unit]
 Description=Minecraft Server Wrapper
 After=network.target
@@ -270,7 +270,7 @@ Environment=NODE_ENV=production
 [Install]
 WantedBy=multi-user.target
 EOF
-    print_success "Created minecraft-wrapper.service file."
+    print_success "Created sproutwrapper.service file."
     
     # Create service installation script
     print_info "Creating service installation script..."
@@ -287,17 +287,17 @@ fi
 echo "Installing systemd service..."
 
 # Copy service file
-cp minecraft-wrapper.service /etc/systemd/system/
+cp sproutwrapper.service /etc/systemd/system/
 
 # Reload systemd
 systemctl daemon-reload
 
 # Enable service
-systemctl enable minecraft-wrapper.service
+systemctl enable sproutwrapper.service
 
 echo "Service installed successfully!"
-echo "Use 'sudo systemctl start minecraft-wrapper' to start the service."
-echo "Use 'sudo systemctl status minecraft-wrapper' to check the status."
+echo "Use 'sudo systemctl start sproutwrapper' to start the service."
+echo "Use 'sudo systemctl status sproutwrapper' to check the status."
 EOF
     chmod +x install-service.sh
     print_success "Created install-service.sh script."
@@ -310,19 +310,19 @@ EOF
 echo "Uninstalling Minecraft Server Wrapper..."
 
 # Stop and disable service if it exists
-if systemctl is-active --quiet minecraft-wrapper; then
+if systemctl is-active --quiet sproutwrapper; then
     echo "Stopping service..."
-    sudo systemctl stop minecraft-wrapper
+    sudo systemctl stop sproutwrapper
 fi
 
-if systemctl is-enabled --quiet minecraft-wrapper; then
+if systemctl is-enabled --quiet sproutwrapper; then
     echo "Disabling service..."
-    sudo systemctl disable minecraft-wrapper
+    sudo systemctl disable sproutwrapper
 fi
 
-if [ -f /etc/systemd/system/minecraft-wrapper.service ]; then
+if [ -f /etc/systemd/system/sproutwrapper.service ]; then
     echo "Removing service file..."
-    sudo rm /etc/systemd/system/minecraft-wrapper.service
+    sudo rm /etc/systemd/system/sproutwrapper.service
     sudo systemctl daemon-reload
 fi
 

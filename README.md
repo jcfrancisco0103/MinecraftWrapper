@@ -265,7 +265,7 @@ MinecraftWrapper/
 ├── start.sh              # Linux start script (created by installer)
 ├── install-service.bat   # Windows service installer (created by installer)
 ├── install-service.sh    # Linux service installer (created by installer)
-├── minecraft-wrapper.service # Systemd service file (created by installer)
+├── sproutwrapper.service # Systemd service file (created by installer)
 ├── minecraft-server/     # Minecraft server directory
 │   ├── server.jar        # Your Minecraft server JAR
 │   ├── server.properties # Server configuration
