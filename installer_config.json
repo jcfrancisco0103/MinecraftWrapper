@@ -1,0 +1,24 @@
+{
+  "install_path": "C:\\Program Files\\Minecraft Server Wrapper",
+  "accept_license": true,
+  "components": {
+    "core": true,
+    "service": true,
+    "shortcuts": true,
+    "examples": false
+  },
+  "create_shortcuts": true,
+  "install_service": true,
+  "installation_options": {
+    "create_desktop_shortcut": true,
+    "create_start_menu_shortcut": true,
+    "add_to_path": false,
+    "auto_start_service": false
+  },
+  "server_configuration": {
+    "default_port": 5900,
+    "default_ram": "2G",
+    "enable_aikar_flags": true,
+    "minecraft_version": "latest"
+  }
+}
