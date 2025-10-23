@@ -414,7 +414,7 @@ function handleFileUpload(e) {
             // Refresh file list after all uploads complete
             if (uploadCount === totalFiles) {
                 console.log('All uploads completed, refreshing file list');
-                loadFiles();
+                loadFiles(currentPath);
             }
         })
         .catch(error => {

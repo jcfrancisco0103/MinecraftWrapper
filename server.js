@@ -29,7 +29,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadPath = req.body.path || './minecraft-server';
+        let uploadPath = req.body.path || './minecraft-server';
+        
+        // Auto-redirect .jar files to plugins folder if uploading to root minecraft-server directory
+        const isJarFile = file.originalname.toLowerCase().endsWith('.jar');
+        const isRootMinecraftDir = uploadPath.endsWith('minecraft-server') || uploadPath.endsWith('minecraft-server\\') || uploadPath.endsWith('minecraft-server/');
+        
+        if (isJarFile && isRootMinecraftDir) {
+            uploadPath = path.join(uploadPath, 'plugins');
+            console.log('Redirecting .jar file to plugins folder:', uploadPath);
+        }
+        
         fs.ensureDirSync(uploadPath);
         cb(null, uploadPath);
     },
