@@ -543,6 +543,27 @@ body {
     margin: 0;
 }
 
+.editor-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.btn-icon {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-icon:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
 .close {
     font-size: 28px;
     font-weight: bold;
@@ -554,10 +575,129 @@ body {
     opacity: 0.7;
 }
 
-.modal-body {
+/* Editor Settings Panel */
+.editor-settings-panel {
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
     padding: 20px;
-    max-height: 80vh;
+    display: none;
+    max-height: 300px;
     overflow-y: auto;
+}
+
+.editor-settings-panel.active {
+    display: block;
+}
+
+.settings-group {
+    margin-bottom: 25px;
+}
+
+.settings-group h4 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.setting-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 10px;
+}
+
+.setting-item label {
+    min-width: 100px;
+    font-weight: 500;
+    color: #495057;
+}
+
+.setting-item select,
+.setting-item input[type="range"] {
+    flex: 1;
+    max-width: 200px;
+    padding: 6px 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.setting-item input[type="range"] {
+    padding: 0;
+}
+
+#fontSizeValue {
+    min-width: 40px;
+    font-weight: 600;
+    color: #3498db;
+}
+
+.setting-item input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.settings-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 15px;
+    border-top: 1px solid #dee2e6;
+}
+
+.modal-body {
+    padding: 0;
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+/* Editor Container */
+.editor-container {
+    display: flex;
+    height: 70vh;
+    min-height: 600px;
+    position: relative;
+}
+
+.editor-gutter {
+    background: #2c3e50;
+    color: #7f8c8d;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 15px 10px;
+    min-width: 60px;
+    text-align: right;
+    user-select: none;
+    border-right: 1px solid #34495e;
+    overflow: hidden;
+}
+
+.editor-gutter.theme-light {
+    background: #f6f8fa;
+    color: #6a737d;
+    border-right: 1px solid #e1e4e8;
+}
+
+.editor-gutter.theme-monokai {
+    background: #272822;
+    color: #75715e;
+    border-right: 1px solid #3e3d32;
+}
+
+.editor-gutter.theme-solarized {
+    background: #073642;
+    color: #586e75;
+    border-right: 1px solid #094656;
+}
+
+.editor-gutter.theme-github {
+    background: #f6f8fa;
+    color: #6a737d;
+    border-right: 1px solid #e1e4e8;
 }
 
 .modal-footer {
@@ -568,16 +708,171 @@ body {
     gap: 10px;
 }
 
+/* Editor Themes */
 #fileEditor {
     width: 100%;
-    height: 70vh;
-    min-height: 600px;
-    border: 2px solid #ddd;
-    border-radius: 8px;
+    height: 100%;
+    border: none;
     padding: 15px;
     font-family: 'Courier New', monospace;
-    font-size: 1rem;
-    resize: vertical;
+    font-size: 14px;
+    font-weight: normal;
+    resize: none;
+    outline: none;
+    line-height: 1.4;
+    tab-size: 4;
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: auto;
+}
+
+/* Dark Theme (Default) */
+#fileEditor.theme-dark {
+    background: #1e1e1e;
+    color: #d4d4d4;
+}
+
+#fileEditor.theme-dark::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+#fileEditor.theme-dark::-webkit-scrollbar-track {
+    background: #2d2d30;
+}
+
+#fileEditor.theme-dark::-webkit-scrollbar-thumb {
+    background: #424242;
+    border-radius: 6px;
+}
+
+#fileEditor.theme-dark::-webkit-scrollbar-thumb:hover {
+    background: #4f4f4f;
+}
+
+/* Light Theme */
+#fileEditor.theme-light {
+    background: #ffffff;
+    color: #24292e;
+}
+
+#fileEditor.theme-light::-webkit-scrollbar-track {
+    background: #f6f8fa;
+}
+
+#fileEditor.theme-light::-webkit-scrollbar-thumb {
+    background: #d1d5da;
+    border-radius: 6px;
+}
+
+#fileEditor.theme-light::-webkit-scrollbar-thumb:hover {
+    background: #c6cbd1;
+}
+
+/* Monokai Theme */
+#fileEditor.theme-monokai {
+    background: #272822;
+    color: #f8f8f2;
+}
+
+/* Solarized Theme */
+#fileEditor.theme-solarized {
+    background: #002b36;
+    color: #839496;
+}
+
+/* GitHub Theme */
+#fileEditor.theme-github {
+    background: #f6f8fa;
+    color: #24292e;
+}
+
+/* Syntax Highlighting Classes */
+.syntax-keyword {
+    color: #569cd6;
+    font-weight: bold;
+}
+
+.syntax-string {
+    color: #ce9178;
+}
+
+.syntax-comment {
+    color: #6a9955;
+    font-style: italic;
+}
+
+.syntax-number {
+    color: #b5cea8;
+}
+
+.syntax-operator {
+    color: #d4d4d4;
+}
+
+.syntax-function {
+    color: #dcdcaa;
+}
+
+.syntax-variable {
+    color: #9cdcfe;
+}
+
+/* Theme-specific syntax highlighting */
+.theme-light .syntax-keyword {
+    color: #0000ff;
+}
+
+.theme-light .syntax-string {
+    color: #a31515;
+}
+
+.theme-light .syntax-comment {
+    color: #008000;
+}
+
+.theme-light .syntax-number {
+    color: #098658;
+}
+
+.theme-monokai .syntax-keyword {
+    color: #f92672;
+}
+
+.theme-monokai .syntax-string {
+    color: #e6db74;
+}
+
+.theme-monokai .syntax-comment {
+    color: #75715e;
+}
+
+.theme-monokai .syntax-number {
+    color: #ae81ff;
+}
+
+.theme-solarized .syntax-keyword {
+    color: #268bd2;
+}
+
+.theme-solarized .syntax-string {
+    color: #2aa198;
+}
+
+.theme-solarized .syntax-comment {
+    color: #586e75;
+}
+
+.theme-github .syntax-keyword {
+    color: #d73a49;
+}
+
+.theme-github .syntax-string {
+    color: #032f62;
+}
+
+.theme-github .syntax-comment {
+    color: #6a737d;
 }
 
 #fileEditor:focus {

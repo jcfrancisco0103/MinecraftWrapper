@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeConsole();
     initializeFileManager();
     initializeMonitoring();
+    initializeEditorSettings();
     console.log('Initializing file manager - loading files');
     loadFiles();
     loadSystemInfo();
@@ -476,12 +477,28 @@ function openFileEditor(filePath, content) {
     currentEditingFile = filePath;
     editorTitle.textContent = `Edit: ${getBasename(filePath)}`;
     fileEditor.value = content;
+    
+    // Load editor settings
+    loadEditorSettings();
+    
+    // Apply syntax highlighting
+    applySyntaxHighlighting();
+    
+    // Update line numbers
+    updateLineNumbers();
+    
     fileEditorModal.style.display = 'block';
 }
 
 function closeFileEditor() {
     fileEditorModal.style.display = 'none';
     currentEditingFile = null;
+    
+    // Hide settings panel if open
+    const settingsPanel = document.getElementById('editorSettingsPanel');
+    if (settingsPanel) {
+        settingsPanel.classList.remove('active');
+    }
 }
 
 function saveFile() {
@@ -505,6 +522,251 @@ function saveFile() {
     .catch(error => {
         showNotification('Error saving file', 'error');
     });
+}
+
+// Editor Settings and Customization
+function initializeEditorSettings() {
+    // Add event listeners for editor controls
+    document.getElementById('settingsBtn').addEventListener('click', toggleSettingsPanel);
+    document.getElementById('fontFamily').addEventListener('change', updateEditorFont);
+    document.getElementById('fontSize').addEventListener('input', updateEditorFont);
+    document.getElementById('fontWeight').addEventListener('change', updateEditorFont);
+    document.getElementById('editorTheme').addEventListener('change', updateEditorTheme);
+    document.getElementById('syntaxHighlight').addEventListener('change', toggleSyntaxHighlighting);
+    document.getElementById('lineNumbers').addEventListener('change', toggleLineNumbers);
+    document.getElementById('resetSettings').addEventListener('click', resetEditorSettings);
+    document.getElementById('applySettings').addEventListener('click', applyEditorSettings);
+    
+    // Add event listeners for editor content changes
+    fileEditor.addEventListener('input', () => {
+        applySyntaxHighlighting();
+        updateLineNumbers();
+    });
+    
+    fileEditor.addEventListener('scroll', syncGutterScroll);
+}
+
+// Additional editor utility functions
+function toggleWordWrap() {
+    const editor = document.getElementById('fileEditor');
+    if (editor.style.whiteSpace === 'pre-wrap') {
+        editor.style.whiteSpace = 'pre';
+        showNotification('Word wrap disabled', 'info');
+    } else {
+        editor.style.whiteSpace = 'pre-wrap';
+        showNotification('Word wrap enabled', 'info');
+    }
+}
+
+function showFindReplace() {
+    // Simple find functionality - in a production app you'd want a proper find/replace dialog
+    const searchTerm = prompt('Find text:');
+    if (searchTerm) {
+        const content = fileEditor.value;
+        const index = content.toLowerCase().indexOf(searchTerm.toLowerCase());
+        if (index !== -1) {
+            fileEditor.focus();
+            fileEditor.setSelectionRange(index, index + searchTerm.length);
+            showNotification(`Found "${searchTerm}"`, 'success');
+        } else {
+            showNotification(`"${searchTerm}" not found`, 'warning');
+        }
+    }
+}
+
+function toggleSettingsPanel() {
+    const settingsPanel = document.getElementById('editorSettingsPanel');
+    settingsPanel.classList.toggle('active');
+}
+
+function loadEditorSettings() {
+    const settings = JSON.parse(localStorage.getItem('editorSettings')) || getDefaultSettings();
+    
+    // Apply font settings
+    document.getElementById('fontFamily').value = settings.fontFamily;
+    document.getElementById('fontSize').value = settings.fontSize;
+    document.getElementById('fontSizeValue').textContent = settings.fontSize + 'px';
+    document.getElementById('fontWeight').value = settings.fontWeight;
+    document.getElementById('editorTheme').value = settings.theme;
+    document.getElementById('syntaxHighlight').checked = settings.syntaxHighlight;
+    document.getElementById('lineNumbers').checked = settings.lineNumbers;
+    
+    applyEditorSettings();
+}
+
+function getDefaultSettings() {
+    return {
+        fontFamily: 'Courier New',
+        fontSize: 14,
+        fontWeight: 'normal',
+        theme: 'dark',
+        syntaxHighlight: true,
+        lineNumbers: true
+    };
+}
+
+function updateEditorFont() {
+    const fontFamily = document.getElementById('fontFamily').value;
+    const fontSize = document.getElementById('fontSize').value;
+    const fontWeight = document.getElementById('fontWeight').value;
+    
+    document.getElementById('fontSizeValue').textContent = fontSize + 'px';
+    
+    fileEditor.style.fontFamily = fontFamily;
+    fileEditor.style.fontSize = fontSize + 'px';
+    fileEditor.style.fontWeight = fontWeight;
+    
+    // Update gutter font to match
+    const gutter = document.getElementById('editorGutter');
+    if (gutter) {
+        gutter.style.fontFamily = fontFamily;
+        gutter.style.fontSize = fontSize + 'px';
+    }
+    
+    saveEditorSettings();
+}
+
+function updateEditorTheme() {
+    const theme = document.getElementById('editorTheme').value;
+    
+    // Remove all theme classes
+    fileEditor.className = fileEditor.className.replace(/theme-\w+/g, '');
+    
+    // Add new theme class
+    fileEditor.classList.add(`theme-${theme}`);
+    
+    // Update gutter theme
+    const gutter = document.getElementById('editorGutter');
+    if (gutter) {
+        gutter.className = gutter.className.replace(/theme-\w+/g, '');
+        gutter.classList.add(`theme-${theme}`);
+    }
+    
+    saveEditorSettings();
+}
+
+function toggleSyntaxHighlighting() {
+    const enabled = document.getElementById('syntaxHighlight').checked;
+    
+    if (enabled) {
+        applySyntaxHighlighting();
+    } else {
+        // Remove syntax highlighting
+        fileEditor.innerHTML = fileEditor.value;
+    }
+    
+    saveEditorSettings();
+}
+
+function toggleLineNumbers() {
+    const enabled = document.getElementById('lineNumbers').checked;
+    const gutter = document.getElementById('editorGutter');
+    
+    if (gutter) {
+        gutter.style.display = enabled ? 'block' : 'none';
+    }
+    
+    saveEditorSettings();
+}
+
+function applySyntaxHighlighting() {
+    if (!document.getElementById('syntaxHighlight').checked) return;
+    
+    const content = fileEditor.value;
+    const fileExtension = currentEditingFile ? currentEditingFile.split('.').pop().toLowerCase() : '';
+    
+    // Basic syntax highlighting for common file types
+    let highlightedContent = content;
+    
+    if (['js', 'json', 'java', 'py', 'cpp', 'c', 'cs'].includes(fileExtension)) {
+        // Keywords
+        highlightedContent = highlightedContent.replace(
+            /\b(function|var|let|const|if|else|for|while|return|class|public|private|protected|static|void|int|string|boolean|true|false|null|undefined|import|export|from|as|default|async|await|try|catch|finally|throw|new|this|super|extends|implements)\b/g,
+            '<span class="syntax-keyword">$1</span>'
+        );
+        
+        // Strings
+        highlightedContent = highlightedContent.replace(
+            /(["'`])((?:\\.|(?!\1)[^\\])*?)\1/g,
+            '<span class="syntax-string">$1$2$1</span>'
+        );
+        
+        // Comments
+        highlightedContent = highlightedContent.replace(
+            /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm,
+            '<span class="syntax-comment">$1</span>'
+        );
+        
+        // Numbers
+        highlightedContent = highlightedContent.replace(
+            /\b(\d+\.?\d*)\b/g,
+            '<span class="syntax-number">$1</span>'
+        );
+        
+        // Functions
+        highlightedContent = highlightedContent.replace(
+            /\b(\w+)(?=\s*\()/g,
+            '<span class="syntax-function">$1</span>'
+        );
+    }
+    
+    // For now, we'll keep it simple and not replace the textarea content
+    // as it would interfere with editing. In a production environment,
+    // you'd want to use a proper code editor like CodeMirror or Monaco Editor
+}
+
+function updateLineNumbers() {
+    if (!document.getElementById('lineNumbers').checked) return;
+    
+    const gutter = document.getElementById('editorGutter');
+    if (!gutter) return;
+    
+    const lines = fileEditor.value.split('\n');
+    const lineNumbers = lines.map((_, index) => index + 1).join('\n');
+    gutter.textContent = lineNumbers;
+}
+
+function syncGutterScroll() {
+    const gutter = document.getElementById('editorGutter');
+    if (gutter) {
+        gutter.scrollTop = fileEditor.scrollTop;
+    }
+}
+
+function saveEditorSettings() {
+    const settings = {
+        fontFamily: document.getElementById('fontFamily').value,
+        fontSize: parseInt(document.getElementById('fontSize').value),
+        fontWeight: document.getElementById('fontWeight').value,
+        theme: document.getElementById('editorTheme').value,
+        syntaxHighlight: document.getElementById('syntaxHighlight').checked,
+        lineNumbers: document.getElementById('lineNumbers').checked
+    };
+    
+    localStorage.setItem('editorSettings', JSON.stringify(settings));
+}
+
+function resetEditorSettings() {
+    const defaultSettings = getDefaultSettings();
+    
+    document.getElementById('fontFamily').value = defaultSettings.fontFamily;
+    document.getElementById('fontSize').value = defaultSettings.fontSize;
+    document.getElementById('fontSizeValue').textContent = defaultSettings.fontSize + 'px';
+    document.getElementById('fontWeight').value = defaultSettings.fontWeight;
+    document.getElementById('editorTheme').value = defaultSettings.theme;
+    document.getElementById('syntaxHighlight').checked = defaultSettings.syntaxHighlight;
+    document.getElementById('lineNumbers').checked = defaultSettings.lineNumbers;
+    
+    applyEditorSettings();
+    showNotification('Editor settings reset to defaults', 'success');
+}
+
+function applyEditorSettings() {
+    updateEditorFont();
+    updateEditorTheme();
+    toggleSyntaxHighlighting();
+    toggleLineNumbers();
+    saveEditorSettings();
 }
 
 // Monitoring functionality
