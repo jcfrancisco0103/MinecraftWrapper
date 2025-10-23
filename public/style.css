@@ -168,8 +168,8 @@ body {
 /* Dashboard */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 30px;
 }
 
 .control-buttons {
@@ -310,10 +310,11 @@ body {
     background: #1e1e1e;
     color: #00ff00;
     font-family: 'Courier New', monospace;
-    height: 400px;
+    height: 70vh;
+    min-height: 600px;
     overflow-y: auto;
     padding: 20px;
-    font-size: 0.9rem;
+    font-size: 1rem;
     line-height: 1.4;
 }
 
@@ -392,7 +393,8 @@ body {
 }
 
 .file-list {
-    max-height: 500px;
+    max-height: 70vh;
+    min-height: 600px;
     overflow-y: auto;
 }
 
@@ -451,12 +453,12 @@ body {
 /* Monitoring */
 .monitoring-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 30px;
 }
 
 .monitoring-grid .card {
-    height: 350px;
+    height: 450px;
 }
 
 .monitoring-grid .card-body {
@@ -519,11 +521,11 @@ body {
 
 .modal-content {
     background: white;
-    margin: 5% auto;
+    margin: 2% auto;
     border-radius: 15px;
-    width: 80%;
-    max-width: 800px;
-    max-height: 80vh;
+    width: 95%;
+    max-width: 1200px;
+    max-height: 95vh;
     overflow: hidden;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
@@ -554,7 +556,7 @@ body {
 
 .modal-body {
     padding: 20px;
-    max-height: 60vh;
+    max-height: 80vh;
     overflow-y: auto;
 }
 
@@ -568,12 +570,13 @@ body {
 
 #fileEditor {
     width: 100%;
-    height: 400px;
+    height: 70vh;
+    min-height: 600px;
     border: 2px solid #ddd;
     border-radius: 8px;
     padding: 15px;
     font-family: 'Courier New', monospace;
-    font-size: 0.9rem;
+    font-size: 1rem;
     resize: vertical;
 }
 
