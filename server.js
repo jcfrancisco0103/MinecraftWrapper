@@ -279,7 +279,7 @@ app.post('/api/server/config', (req, res) => {
         }
         
         // Validate RAM allocation
-        const validRamValues = ['1G', '2G', '4G', '8G', '16G', '32G'];
+        const validRamValues = ['1G', '2G', '4G', '8G', '16G', '24G', '32G'];
         if (!validRamValues.includes(ramAllocation)) {
             return res.status(400).json({ error: 'Invalid RAM allocation value' });
         }
