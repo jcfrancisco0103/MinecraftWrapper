@@ -487,6 +487,22 @@ function openFileEditor(filePath, content) {
     // Update line numbers
     updateLineNumbers();
     
+    // Add keyboard shortcut for saving (Ctrl+S)
+    const handleKeyDown = (e) => {
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            saveFile();
+        }
+        if (e.key === 'Escape') {
+            closeFileEditor();
+        }
+    };
+    
+    // Remove existing event listener if any
+    fileEditor.removeEventListener('keydown', handleKeyDown);
+    // Add new event listener
+    fileEditor.addEventListener('keydown', handleKeyDown);
+    
     fileEditorModal.style.display = 'block';
 }
 
@@ -518,6 +534,8 @@ function saveFile() {
     .then(data => {
         showNotification(data.message, 'success');
         closeFileEditor();
+        // Automatically refresh the file list to show updated files
+        loadFiles(currentPath);
     })
     .catch(error => {
         showNotification('Error saving file', 'error');
