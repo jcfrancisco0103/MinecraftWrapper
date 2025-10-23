@@ -19,9 +19,6 @@ const io = socketIo(server, {
     }
 });
 
-// Load server configuration on startup
-loadServerConfig();
-
 const PORT = process.env.PORT || 3000;
 
 // Middleware
@@ -85,9 +82,21 @@ app.get('/', (req, res) => {
 app.get('/api/files', async (req, res) => {
     try {
         const requestedPath = req.query.path || serverPath;
+        
+        // Add logging for debugging
+        console.log('Files API request - path parameter:', requestedPath);
+        
+        // Validate path parameter
+        if (typeof requestedPath !== 'string' || requestedPath.trim() === '') {
+            console.log('Invalid path parameter:', requestedPath);
+            return res.status(400).json({ error: 'Invalid path parameter' });
+        }
+        
         const fullPath = path.resolve(requestedPath);
+        console.log('Resolved full path:', fullPath);
         
         if (!await fs.pathExists(fullPath)) {
+            console.log('Path not found:', fullPath);
             return res.status(404).json({ error: 'Path not found' });
         }
 
@@ -129,18 +138,30 @@ app.get('/api/files', async (req, res) => {
 
 app.post('/api/files/upload', upload.single('file'), (req, res) => {
     try {
+        console.log('Upload request received');
+        console.log('Request body path:', req.body.path);
+        console.log('File info:', req.file ? {
+            originalname: req.file.originalname,
+            filename: req.file.filename,
+            size: req.file.size,
+            path: req.file.path
+        } : 'No file');
+        
         if (!req.file) {
+            console.log('No file uploaded in request');
             return res.status(400).json({ error: 'No file uploaded' });
         }
         
         // Validate file size (100MB limit)
         const maxSize = 100 * 1024 * 1024; // 100MB
         if (req.file.size > maxSize) {
+            console.log('File too large:', req.file.size, 'bytes');
             // Remove the uploaded file
             fs.removeSync(req.file.path);
             return res.status(413).json({ error: 'File too large (max 100MB)' });
         }
         
+        console.log('File uploaded successfully:', req.file.filename);
         res.json({ 
             message: 'File uploaded successfully', 
             path: req.file.path,
@@ -149,6 +170,7 @@ app.post('/api/files/upload', upload.single('file'), (req, res) => {
         });
     } catch (error) {
         console.error('Upload error:', error);
+        console.error('Upload error stack:', error.stack);
         res.status(500).json({ error: error.message });
     }
 });
@@ -371,6 +393,9 @@ app.get('/api/system', async (req, res) => {
             }))
         });
     } catch (error) {
+        console.error('Files API error:', error);
+        console.error('Request path:', req.query.path);
+        console.error('Error stack:', error.stack);
         res.status(500).json({ error: error.message });
     }
 });
@@ -541,4 +566,7 @@ app.use((err, req, res, next) => {
 server.listen(PORT, () => {
     console.log(`Minecraft Server Wrapper running on port ${PORT}`);
     console.log(`Access the web interface at: http://localhost:${PORT}`);
+    
+    // Load server configuration after server starts
+    loadServerConfig();
 });

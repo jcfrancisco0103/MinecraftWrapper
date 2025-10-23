@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeConsole();
     initializeFileManager();
     initializeMonitoring();
+    console.log('Initializing file manager - loading files');
     loadFiles();
     loadSystemInfo();
     loadServerConfig();
@@ -175,7 +176,10 @@ function initializeFileManager() {
     });
     
     document.getElementById('fileUpload').addEventListener('change', handleFileUpload);
-    document.getElementById('refreshFiles').addEventListener('click', loadFiles);
+    document.getElementById('refreshFiles').addEventListener('click', (e) => {
+        e.preventDefault();
+        loadFiles();
+    });
     
     // Modal functionality
     document.querySelector('.close').addEventListener('click', closeFileEditor);
@@ -243,7 +247,7 @@ function loadFiles(path = currentPath) {
                         <i class="fas fa-exclamation-triangle"></i>
                         <h3>Failed to Load Files</h3>
                         <p>${errorMessage}</p>
-                        <button onclick="loadFiles()" class="btn btn-primary">
+                        <button onclick="loadFiles(); return false;" class="btn btn-primary">
                             <i class="fas fa-retry"></i> Try Again
                         </button>
                     </div>
@@ -350,6 +354,9 @@ function handleFileUpload(e) {
     const files = e.target.files;
     if (!files.length) return;
     
+    console.log('File upload initiated, files count:', files.length);
+    console.log('Current path for upload:', currentPath);
+    
     // Show upload progress
     showNotification('Starting file upload...', 'info');
     
@@ -357,9 +364,12 @@ function handleFileUpload(e) {
     const totalFiles = files.length;
     
     Array.from(files).forEach((file, index) => {
+        console.log(`Processing file ${index + 1}/${totalFiles}:`, file.name, 'Size:', file.size);
+        
         // Validate file size (100MB limit)
         const maxSize = 100 * 1024 * 1024; // 100MB
         if (file.size > maxSize) {
+            console.log('File too large:', file.name, file.size);
             showNotification(`File ${file.name} is too large (max 100MB)`, 'error');
             return;
         }
@@ -375,6 +385,8 @@ function handleFileUpload(e) {
         formData.append('file', file);
         formData.append('path', currentPath);
         
+        console.log('Uploading file:', file.name, 'to path:', currentPath);
+        
         // Show individual file progress
         const progressId = `upload-${index}`;
         showUploadProgress(file.name, progressId);
@@ -384,24 +396,29 @@ function handleFileUpload(e) {
             body: formData
         })
         .then(response => {
+            console.log('Upload response status:', response.status);
             if (!response.ok) {
                 return response.json().then(err => {
+                    console.log('Upload error response:', err);
                     throw new Error(err.error || `Upload failed: ${response.statusText}`);
                 });
             }
             return response.json();
         })
         .then(data => {
+            console.log('Upload success response:', data);
             uploadCount++;
             hideUploadProgress(progressId);
             showNotification(`File ${file.name} uploaded successfully`, 'success');
             
             // Refresh file list after all uploads complete
             if (uploadCount === totalFiles) {
+                console.log('All uploads completed, refreshing file list');
                 loadFiles();
             }
         })
         .catch(error => {
+            console.error('Upload fetch error for file:', file.name, error);
             hideUploadProgress(progressId);
             console.error('Upload error:', error);
             showNotification(`Error uploading ${file.name}: ${error.message}`, 'error');
@@ -422,10 +439,12 @@ function deleteFile(filePath, fileName) {
         })
         .then(response => response.json())
         .then(data => {
+            console.log('File deletion successful:', data);
             showNotification(data.message, 'success');
             loadFiles();
         })
         .catch(error => {
+            console.error('File deletion error:', error);
             showNotification('Error deleting file', 'error');
         });
     }
