@@ -19,6 +19,9 @@ const io = socketIo(server, {
     }
 });
 
+// Load server configuration on startup
+loadServerConfig();
+
 const PORT = process.env.PORT || 3000;
 
 // Middleware
@@ -44,6 +47,12 @@ let minecraftProcess = null;
 let serverStatus = 'stopped';
 let serverPath = './minecraft-server';
 let jarFile = 'server.jar';
+
+// Server configuration
+let serverConfig = {
+    ramAllocation: '2G',
+    useAikarFlags: true
+};
 
 // Aikar's flags for optimization
 const aikarFlags = [
@@ -224,6 +233,41 @@ app.post('/api/files/rename', async (req, res) => {
     }
 });
 
+// Server configuration routes
+app.get('/api/server/config', (req, res) => {
+    res.json(serverConfig);
+});
+
+app.post('/api/server/config', (req, res) => {
+    try {
+        const { ramAllocation, useAikarFlags } = req.body;
+        
+        if (!ramAllocation || typeof useAikarFlags !== 'boolean') {
+            return res.status(400).json({ error: 'Invalid configuration data' });
+        }
+        
+        // Validate RAM allocation
+        const validRamValues = ['1G', '2G', '4G', '8G', '16G'];
+        if (!validRamValues.includes(ramAllocation)) {
+            return res.status(400).json({ error: 'Invalid RAM allocation value' });
+        }
+        
+        serverConfig.ramAllocation = ramAllocation;
+        serverConfig.useAikarFlags = useAikarFlags;
+        
+        // Save configuration to file
+        saveServerConfig();
+        
+        res.json({ 
+            message: 'Server configuration saved successfully',
+            config: serverConfig
+        });
+    } catch (error) {
+        console.error('Error saving server config:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Server management routes
 app.post('/api/server/start', (req, res) => {
     if (serverStatus !== 'stopped') {
@@ -266,6 +310,29 @@ app.post('/api/server/command', (req, res) => {
 app.get('/api/server/status', (req, res) => {
     res.json({ status: serverStatus });
 });
+
+// Configuration persistence functions
+function loadServerConfig() {
+    try {
+        if (fs.existsSync('./server-config.json')) {
+            const configData = fs.readFileSync('./server-config.json', 'utf8');
+            const loadedConfig = JSON.parse(configData);
+            serverConfig = { ...serverConfig, ...loadedConfig };
+            console.log('Server configuration loaded:', serverConfig);
+        }
+    } catch (error) {
+        console.error('Error loading server config:', error);
+    }
+}
+
+function saveServerConfig() {
+    try {
+        fs.writeFileSync('./server-config.json', JSON.stringify(serverConfig, null, 2));
+        console.log('Server configuration saved:', serverConfig);
+    } catch (error) {
+        console.error('Error saving server config:', error);
+    }
+}
 
 // System monitoring route
 app.get('/api/system', async (req, res) => {
@@ -317,15 +384,19 @@ function startMinecraftServer() {
     serverStatus = 'starting';
     io.emit('serverStatus', { status: serverStatus });
     
-    const ramAmount = '2G'; // Default 2GB, can be made configurable
+    const ramAmount = serverConfig.ramAllocation || '2G';
+    const useAikar = serverConfig.useAikarFlags !== false;
+    
     const javaArgs = [
         `-Xms${ramAmount}`,
         `-Xmx${ramAmount}`,
-        ...aikarFlags,
+        ...(useAikar ? aikarFlags : []),
         '-jar',
         jarFile,
         'nogui'
     ];
+    
+    console.log(`Starting Minecraft server with ${ramAmount} RAM, Aikar flags: ${useAikar}`);
     
     minecraftProcess = spawn('java', javaArgs, {
         cwd: serverPath,

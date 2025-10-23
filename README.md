@@ -15,9 +15,125 @@ A beautiful, cross-platform web-based Minecraft server management tool with real
 
 ## Prerequisites
 
-- Node.js (v14 or higher)
-- Java (for running Minecraft server)
-- Minecraft server JAR file
+### System Requirements
+- **Operating System**: Windows 10/11 or Ubuntu 18.04+ (or compatible Linux distributions)
+- **RAM**: Minimum 4GB (8GB+ recommended for better server performance)
+- **Storage**: At least 2GB free space (more depending on world size)
+- **Network**: Internet connection for initial setup and multiplayer
+
+### Required Software
+- **Node.js** (version 14 or higher) - [Download here](https://nodejs.org/)
+- **Java** (version 17 or higher) - [Download here](https://adoptium.net/)
+- **Minecraft Server JAR** - [Download here](https://www.minecraft.net/en-us/download/server)
+
+### Ubuntu/Linux Additional Dependencies
+Before running the application on Ubuntu or other Linux distributions, ensure you have the following packages installed:
+
+#### Essential Build Tools
+```bash
+sudo apt update
+sudo apt install -y build-essential curl wget git
+```
+
+#### For Ubuntu/Debian Systems
+```bash
+# Update package list
+sudo apt update
+
+# Install essential packages
+sudo apt install -y \
+    curl \
+    wget \
+    git \
+    build-essential \
+    software-properties-common \
+    apt-transport-https \
+    ca-certificates \
+    gnupg \
+    lsb-release
+
+# Install Node.js 18.x (recommended)
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Install Java 17 (required for modern Minecraft servers)
+sudo apt install -y openjdk-17-jre-headless openjdk-17-jdk-headless
+
+# Install additional utilities (optional but recommended)
+sudo apt install -y \
+    htop \
+    screen \
+    tmux \
+    nano \
+    vim \
+    unzip \
+    zip
+```
+
+#### For CentOS/RHEL/Fedora Systems
+```bash
+# For Fedora/newer systems with dnf
+sudo dnf update
+sudo dnf install -y \
+    curl \
+    wget \
+    git \
+    gcc \
+    gcc-c++ \
+    make \
+    nodejs \
+    npm \
+    java-17-openjdk-headless \
+    java-17-openjdk-devel
+
+# For older CentOS/RHEL systems with yum
+sudo yum update
+sudo yum install -y \
+    curl \
+    wget \
+    git \
+    gcc \
+    gcc-c++ \
+    make \
+    java-17-openjdk-headless \
+    java-17-openjdk-devel
+
+# Install Node.js via NodeSource repository
+curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+sudo yum install -y nodejs  # or sudo dnf install -y nodejs
+```
+
+#### For Arch Linux Systems
+```bash
+sudo pacman -Syu
+sudo pacman -S \
+    curl \
+    wget \
+    git \
+    base-devel \
+    nodejs \
+    npm \
+    jre17-openjdk-headless \
+    jdk17-openjdk
+```
+
+#### Verify Installations
+After installing the dependencies, verify they are working correctly:
+
+```bash
+# Check Node.js version (should be 14+)
+node --version
+
+# Check npm version
+npm --version
+
+# Check Java version (should be 17+)
+java --version
+
+# Check if build tools are available
+gcc --version
+make --version
+```
 
 ## Installation
 
@@ -96,7 +212,13 @@ PORT=8080 npm start
 ```
 
 ### RAM Allocation
-You can configure RAM allocation through the web interface or by modifying the `ramAmount` variable in `server.js`.
+You can configure RAM allocation through the web interface. The wrapper now includes a **Save Configuration** button that allows you to:
+
+- **Select RAM Amount**: Choose from 1GB, 2GB, 4GB, 8GB, or 16GB
+- **Toggle Aikar's Flags**: Enable or disable performance optimization flags
+- **Persistent Settings**: Your configuration is automatically saved and will be used when the server starts
+
+The saved configuration is stored in `server-config.json` and will persist across server restarts. When you start the Minecraft server, it will use your saved RAM allocation and flag preferences.
 
 ### Aikar's Flags
 The wrapper includes Aikar's optimization flags by default. These can be toggled through the web interface.
@@ -163,6 +285,8 @@ MinecraftWrapper/
 - `POST /api/server/kill` - Kill the server process
 - `POST /api/server/command` - Send command to server
 - `GET /api/server/status` - Get server status
+- `GET /api/server/config` - Get server configuration (RAM, flags)
+- `POST /api/server/config` - Save server configuration (RAM, flags)
 
 ### File Management
 - `GET /api/files` - List files/folders or get file content

@@ -228,6 +228,15 @@ body {
     color: white;
 }
 
+.config-actions {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.config-actions .btn {
+    min-width: 150px;
+}
+
 .config-item {
     margin-bottom: 15px;
 }

@@ -63,6 +63,10 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeMonitoring();
     loadFiles();
     loadSystemInfo();
+    loadServerConfig();
+    
+    // Add event listeners
+    document.getElementById('saveConfigBtn').addEventListener('click', saveServerConfig);
 });
 
 // Tab functionality
@@ -797,6 +801,62 @@ socket.on('consoleOutput', (data) => {
 socket.on('systemStats', (data) => {
     updateCharts(data.cpu, data.memory, data.timestamp);
 });
+
+// Server configuration functions
+function loadServerConfig() {
+    fetch('/api/server/config')
+        .then(response => response.json())
+        .then(config => {
+            document.getElementById('ramSelect').value = config.ramAllocation || '2G';
+            document.getElementById('aikarFlags').checked = config.useAikarFlags !== false;
+        })
+        .catch(error => {
+            console.error('Error loading server config:', error);
+            // Use defaults if config can't be loaded
+        });
+}
+
+function saveServerConfig() {
+    const ramAllocation = document.getElementById('ramSelect').value;
+    const useAikarFlags = document.getElementById('aikarFlags').checked;
+    
+    const config = {
+        ramAllocation: ramAllocation,
+        useAikarFlags: useAikarFlags
+    };
+    
+    const saveBtn = document.getElementById('saveConfigBtn');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    saveBtn.disabled = true;
+    
+    fetch('/api/server/config', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(config)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || `HTTP ${response.status}: ${response.statusText}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        showNotification('Server configuration saved successfully!', 'success');
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+    })
+    .catch(error => {
+        console.error('Error saving server config:', error);
+        showNotification(`Error saving configuration: ${error.message}`, 'error');
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+    });
+}
 
 // Utility functions
 function formatFileSize(bytes) {
