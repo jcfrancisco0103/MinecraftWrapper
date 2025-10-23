@@ -100,7 +100,7 @@ if not exist "minecraft-server" (
     echo %YELLOW%[INFO]%NC% minecraft-server directory already exists.
 )
 
-:: Create sample server.properties if it doesn't exist
+:: Create sample server.properties if it does not exist
 if not exist "minecraft-server\server.properties" (
     echo %BLUE%[INFO]%NC% Creating default server.properties...
     (
@@ -144,7 +144,7 @@ echo %BLUE%[INFO]%NC% Creating service installation script...
 (
     echo @echo off
     echo :: Install Minecraft Server Wrapper as Windows Service
-    echo :: Requires NSSM ^(Non-Sucking Service Manager^)
+    echo :: Requires NSSM ^(Null Service Manager^)
     echo.
     echo echo This script requires NSSM to install the service.
     echo echo Download NSSM from: https://nssm.cc/download
@@ -197,7 +197,7 @@ echo %BLUE%Optional:%NC%
 echo - Run 'install-service.bat' to install as a Windows service
 echo - Check the README.md file for detailed instructions
 echo.
-echo %YELLOW%[NOTE]%NC% If you don't have a Minecraft server JAR file, download it from:
+echo %YELLOW%[NOTE]%NC% If you do not have a Minecraft server JAR file, download it from:
 echo https://www.minecraft.net/en-us/download/server
 echo.
 pause

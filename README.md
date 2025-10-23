@@ -299,7 +299,7 @@ MinecraftWrapper/
 
 ## Troubleshooting
 
-### Server Won't Start
+### Server Will Not Start
 1. Ensure Java is installed and accessible from command line
 2. Check that `server.jar` exists in the `minecraft-server` folder
 3. Verify EULA is accepted (`eula=true` in `eula.txt`)

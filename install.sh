@@ -210,7 +210,7 @@ main() {
         print_info "minecraft-server directory already exists."
     fi
     
-    # Create sample server.properties if it doesn't exist
+    # Create sample server.properties if it does not exist
     if [ ! -f "minecraft-server/server.properties" ]; then
         print_info "Creating default server.properties..."
         cat > minecraft-server/server.properties << EOF
@@ -350,7 +350,7 @@ EOF
     echo "- Run 'sudo ./install-service.sh' to install as a systemd service"
     echo "- Check the README.md file for detailed instructions"
     echo
-    print_warning "If you don't have a Minecraft server JAR file, download it from:"
+    print_warning "If you do not have a Minecraft server JAR file, download it from:"
     echo "https://www.minecraft.net/en-us/download/server"
     echo
 }

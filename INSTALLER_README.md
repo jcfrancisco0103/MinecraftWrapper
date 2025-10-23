@@ -187,7 +187,7 @@ After installation, follow these steps to complete the setup:
 This is the most common installation issue on Windows. Here are the solutions:
 
 **Solution 1: Use Default User Directory (Recommended)**
-- The installer now defaults to `%LOCALAPPDATA%\MinecraftServerWrapper` which doesn't require admin privileges
+- The installer now defaults to `%LOCALAPPDATA%\MinecraftServerWrapper` which does not require admin privileges
 - This is the easiest and safest option for most users
 
 **Solution 2: Run as Administrator**
