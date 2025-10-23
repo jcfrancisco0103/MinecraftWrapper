@@ -511,20 +511,36 @@ function stopMinecraftServer() {
 
 async function restartMinecraftServerWithVerification() {
     try {
-        // Stage 1: Graceful stop with verification
+        // Stage 1: Check current server state and stop if running
         io.emit('consoleOutput', { type: 'system', data: '=== RESTART SEQUENCE INITIATED ===' });
-        io.emit('consoleOutput', { type: 'system', data: 'Stage 1/5: Stopping server gracefully...' });
+        io.emit('consoleOutput', { type: 'system', data: 'Stage 1/5: Checking server state...' });
         
-        if (minecraftProcess) {
-            await stopMinecraftServer();
+        if (minecraftProcess && serverStatus !== 'stopped') {
+            io.emit('consoleOutput', { type: 'system', data: 'Server is running, stopping gracefully...' });
+            try {
+                await stopMinecraftServer();
+            } catch (stopError) {
+                io.emit('consoleOutput', { type: 'warning', data: `Stop error: ${stopError.message}` });
+                // Continue with restart even if stop had issues
+            }
+        } else {
+            io.emit('consoleOutput', { type: 'system', data: 'No server running, proceeding to start...' });
         }
         
         // Stage 2: Verify server has fully stopped
         io.emit('consoleOutput', { type: 'system', data: 'Stage 2/5: Verifying server shutdown...' });
         await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
         
+        // Force cleanup if process still exists
         if (minecraftProcess) {
-            throw new Error('Server failed to stop properly');
+            io.emit('consoleOutput', { type: 'system', data: 'Force cleaning up existing process...' });
+            try {
+                minecraftProcess.kill('SIGKILL');
+            } catch (killError) {
+                // Ignore kill errors, process might already be dead
+            }
+            minecraftProcess = null;
+            serverStatus = 'stopped';
         }
         
         io.emit('consoleOutput', { type: 'system', data: 'Server shutdown verified successfully' });
@@ -533,7 +549,11 @@ async function restartMinecraftServerWithVerification() {
         io.emit('consoleOutput', { type: 'system', data: 'Stage 3/5: Initializing fresh server instance...' });
         await new Promise(resolve => setTimeout(resolve, 1000)); // Brief pause
         
-        startMinecraftServer();
+        try {
+            startMinecraftServer();
+        } catch (startError) {
+            throw new Error(`Failed to start server: ${startError.message}`);
+        }
         
         // Stage 4: Wait for server to start and confirm accessibility
         io.emit('consoleOutput', { type: 'system', data: 'Stage 4/5: Waiting for server to start...' });
@@ -543,13 +563,20 @@ async function restartMinecraftServerWithVerification() {
                 reject(new Error('Server start timeout - failed to start within 60 seconds'));
             }, 60000);
             
+            let checkCount = 0;
+            const maxChecks = 60; // Maximum 60 checks (60 seconds)
+            
             const checkStatus = () => {
+                checkCount++;
                 if (serverStatus === 'running') {
                     clearTimeout(startTimeout);
                     resolve();
                 } else if (serverStatus === 'error') {
                     clearTimeout(startTimeout);
                     reject(new Error('Server failed to start - check console for errors'));
+                } else if (checkCount >= maxChecks) {
+                    clearTimeout(startTimeout);
+                    reject(new Error('Server start timeout - maximum checks reached'));
                 } else {
                     setTimeout(checkStatus, 1000);
                 }
@@ -572,6 +599,19 @@ async function restartMinecraftServerWithVerification() {
     } catch (error) {
         io.emit('consoleOutput', { type: 'error', data: `=== RESTART SEQUENCE FAILED ===` });
         io.emit('consoleOutput', { type: 'error', data: `Error: ${error.message}` });
+        
+        // Ensure clean state on failure
+        if (minecraftProcess) {
+            try {
+                minecraftProcess.kill('SIGKILL');
+            } catch (killError) {
+                // Ignore kill errors
+            }
+            minecraftProcess = null;
+        }
+        serverStatus = 'stopped';
+        io.emit('serverStatus', { status: serverStatus });
+        
         throw error;
     }
 }
