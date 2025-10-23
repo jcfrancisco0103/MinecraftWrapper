@@ -19,7 +19,7 @@ const io = socketIo(server, {
     }
 });
 
-const PORT = process.env.PORT || 5900;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
@@ -120,8 +120,26 @@ app.get('/api/files', async (req, res) => {
 
 app.post('/api/files/upload', upload.single('file'), (req, res) => {
     try {
-        res.json({ message: 'File uploaded successfully', path: req.file.path });
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+        
+        // Validate file size (100MB limit)
+        const maxSize = 100 * 1024 * 1024; // 100MB
+        if (req.file.size > maxSize) {
+            // Remove the uploaded file
+            fs.removeSync(req.file.path);
+            return res.status(413).json({ error: 'File too large (max 100MB)' });
+        }
+        
+        res.json({ 
+            message: 'File uploaded successfully', 
+            path: req.file.path,
+            filename: req.file.filename,
+            size: req.file.size
+        });
     } catch (error) {
+        console.error('Upload error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -146,6 +164,62 @@ app.post('/api/files/save', async (req, res) => {
         await fs.writeFile(filePath, content, 'utf8');
         res.json({ message: 'File saved successfully' });
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/files/rename', async (req, res) => {
+    try {
+        const { oldPath, newName } = req.body;
+        
+        // Debug logging
+        console.log('Rename request received:');
+        console.log('  oldPath:', oldPath);
+        console.log('  newName:', newName);
+        
+        if (!oldPath || !newName) {
+            return res.status(400).json({ error: 'Old path and new name are required' });
+        }
+        
+        // Resolve the path to handle both relative and absolute paths
+        const resolvedOldPath = path.resolve(oldPath);
+        console.log('  resolvedOldPath:', resolvedOldPath);
+        console.log('  oldPath exists:', await fs.pathExists(resolvedOldPath));
+        
+        // Validate new name
+        const invalidChars = /[<>:"/\\|?*]/;
+        if (invalidChars.test(newName)) {
+            return res.status(400).json({ error: 'Invalid characters in filename' });
+        }
+        
+        // Get directory and create new path
+        const directory = path.dirname(resolvedOldPath);
+        const newPath = path.join(directory, newName);
+        
+        console.log('  directory:', directory);
+        console.log('  newPath:', newPath);
+        
+        // Check if target already exists
+        if (await fs.pathExists(newPath)) {
+            return res.status(409).json({ error: 'A file or folder with that name already exists' });
+        }
+        
+        // Check if source exists
+        if (!await fs.pathExists(resolvedOldPath)) {
+            console.log('  ERROR: Source file not found at:', resolvedOldPath);
+            return res.status(404).json({ error: 'Source file or folder not found' });
+        }
+        
+        // Perform rename
+        await fs.rename(resolvedOldPath, newPath);
+        
+        res.json({ 
+            message: 'File renamed successfully',
+            oldPath: resolvedOldPath,
+            newPath: newPath
+        });
+    } catch (error) {
+        console.error('Rename error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -362,6 +436,36 @@ setInterval(async () => {
         console.error('Error getting system stats:', error);
     }
 }, 2000); // Update every 2 seconds
+
+// Enhanced error handling middleware (must be after all routes)
+app.use((err, req, res, next) => {
+    console.error('Server error:', err);
+    
+    // Handle multer errors
+    if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: 'File too large' });
+    }
+    
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({ error: 'Unexpected file field' });
+    }
+    
+    // Handle file system errors
+    if (err.code === 'ENOENT') {
+        return res.status(404).json({ error: 'File or directory not found' });
+    }
+    
+    if (err.code === 'EACCES' || err.code === 'EPERM') {
+        return res.status(403).json({ error: 'Permission denied' });
+    }
+    
+    if (err.code === 'ENOSPC') {
+        return res.status(507).json({ error: 'Insufficient storage space' });
+    }
+    
+    // Default error response
+    res.status(500).json({ error: 'Internal server error' });
+});
 
 server.listen(PORT, () => {
     console.log(`Minecraft Server Wrapper running on port ${PORT}`);

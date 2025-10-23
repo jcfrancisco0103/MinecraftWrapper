@@ -1,6 +1,37 @@
 // Socket.io connection
 const socket = io();
 
+// Browser-compatible path utilities
+function getParentPath(path) {
+    if (!path || path === '/' || path === '.') return '/';
+    
+    // Handle Windows paths
+    if (path.includes('\\')) {
+        const parts = path.split('\\').filter(part => part !== '');
+        if (parts.length <= 1) return path;
+        return parts.slice(0, -1).join('\\') || '\\';
+    }
+    
+    // Handle Unix paths
+    const parts = path.split('/').filter(part => part !== '');
+    if (parts.length <= 1) return '/';
+    return '/' + parts.slice(0, -1).join('/');
+}
+
+function getBasename(path) {
+    if (!path) return '';
+    
+    // Handle Windows paths
+    if (path.includes('\\')) {
+        const parts = path.split('\\');
+        return parts[parts.length - 1] || '';
+    }
+    
+    // Handle Unix paths
+    const parts = path.split('/');
+    return parts[parts.length - 1] || '';
+}
+
 // Global variables
 let currentPath = './minecraft-server';
 let currentEditingFile = null;
@@ -156,9 +187,25 @@ function initializeFileManager() {
 }
 
 function loadFiles(path = currentPath) {
+    // Show loading indicator
+    if (fileList) {
+        fileList.innerHTML = '<div class="loading-indicator"><i class="fas fa-spinner fa-spin"></i> Loading files...</div>';
+    }
+    
     fetch(`/api/files?path=${encodeURIComponent(path)}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.error || `HTTP ${response.status}: ${response.statusText}`);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
             if (data.isFile) {
                 // Open file for editing
                 openFileEditor(data.path, data.content);
@@ -169,7 +216,35 @@ function loadFiles(path = currentPath) {
             }
         })
         .catch(error => {
-            showNotification('Error loading files', 'error');
+            console.error('File loading error:', error);
+            
+            // Show specific error message
+            let errorMessage = 'Error loading files';
+            if (error.message.includes('Path not found')) {
+                errorMessage = 'Directory not found. It may have been moved or deleted.';
+            } else if (error.message.includes('Permission denied')) {
+                errorMessage = 'Permission denied. Check file system permissions.';
+            } else if (error.message.includes('ENOENT')) {
+                errorMessage = 'Directory does not exist or is inaccessible.';
+            } else if (error.message) {
+                errorMessage = `Error: ${error.message}`;
+            }
+            
+            showNotification(errorMessage, 'error');
+            
+            // Show error in file list
+            if (fileList) {
+                fileList.innerHTML = `
+                    <div class="error-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Failed to Load Files</h3>
+                        <p>${errorMessage}</p>
+                        <button onclick="loadFiles()" class="btn btn-primary">
+                            <i class="fas fa-retry"></i> Try Again
+                        </button>
+                    </div>
+                `;
+            }
         });
 }
 
@@ -181,7 +256,7 @@ function displayFiles(items) {
         const parentItem = createFileItem({
             name: '..',
             isDirectory: true,
-            path: require('path').dirname(currentPath)
+            path: getParentPath(currentPath)
         }, true);
         fileList.appendChild(parentItem);
     }
@@ -229,9 +304,22 @@ function createFileItem(item, isParent = false) {
     actions.className = 'file-actions-btn';
     
     if (!isParent) {
+        // Rename button
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'btn btn-secondary';
+        renameBtn.innerHTML = '<i class="fas fa-edit"></i>';
+        renameBtn.title = 'Rename';
+        renameBtn.onclick = (e) => {
+            e.stopPropagation();
+            showRenameDialog(item);
+        };
+        actions.appendChild(renameBtn);
+        
+        // Delete button
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'btn btn-danger';
         deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        deleteBtn.title = 'Delete';
         deleteBtn.onclick = (e) => {
             e.stopPropagation();
             deleteFile(item.path, item.name);
@@ -245,7 +333,7 @@ function createFileItem(item, isParent = false) {
     
     div.addEventListener('click', () => {
         if (isParent) {
-            loadFiles(require('path').dirname(currentPath));
+            loadFiles(getParentPath(currentPath));
         } else {
             loadFiles(item.path);
         }
@@ -258,22 +346,61 @@ function handleFileUpload(e) {
     const files = e.target.files;
     if (!files.length) return;
     
-    Array.from(files).forEach(file => {
+    // Show upload progress
+    showNotification('Starting file upload...', 'info');
+    
+    let uploadCount = 0;
+    const totalFiles = files.length;
+    
+    Array.from(files).forEach((file, index) => {
+        // Validate file size (100MB limit)
+        const maxSize = 100 * 1024 * 1024; // 100MB
+        if (file.size > maxSize) {
+            showNotification(`File ${file.name} is too large (max 100MB)`, 'error');
+            return;
+        }
+        
+        // Validate file type (basic security check)
+        const allowedExtensions = ['.txt', '.json', '.yml', '.yaml', '.properties', '.cfg', '.conf', '.log', '.jar', '.zip'];
+        const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+        if (!allowedExtensions.includes(fileExtension) && !file.name.includes('.')) {
+            // Allow files without extensions (like 'eula.txt' might be 'eula')
+        }
+        
         const formData = new FormData();
         formData.append('file', file);
         formData.append('path', currentPath);
+        
+        // Show individual file progress
+        const progressId = `upload-${index}`;
+        showUploadProgress(file.name, progressId);
         
         fetch('/api/files/upload', {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.error || `Upload failed: ${response.statusText}`);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
+            uploadCount++;
+            hideUploadProgress(progressId);
             showNotification(`File ${file.name} uploaded successfully`, 'success');
-            loadFiles();
+            
+            // Refresh file list after all uploads complete
+            if (uploadCount === totalFiles) {
+                loadFiles();
+            }
         })
         .catch(error => {
-            showNotification(`Error uploading ${file.name}`, 'error');
+            hideUploadProgress(progressId);
+            console.error('Upload error:', error);
+            showNotification(`Error uploading ${file.name}: ${error.message}`, 'error');
         });
     });
     
@@ -302,7 +429,7 @@ function deleteFile(filePath, fileName) {
 
 function openFileEditor(filePath, content) {
     currentEditingFile = filePath;
-    editorTitle.textContent = `Edit: ${require('path').basename(filePath)}`;
+    editorTitle.textContent = `Edit: ${getBasename(filePath)}`;
     fileEditor.value = content;
     fileEditorModal.style.display = 'block';
 }
@@ -499,6 +626,162 @@ function updateCharts(cpu, memory, timestamp) {
     }
     
     memoryChart.update('none');
+}
+
+// Upload progress functions
+function showUploadProgress(fileName, progressId) {
+    const progressContainer = document.getElementById('uploadProgress') || createUploadProgressContainer();
+    
+    const progressItem = document.createElement('div');
+    progressItem.id = progressId;
+    progressItem.className = 'upload-progress-item';
+    progressItem.innerHTML = `
+        <div class="upload-info">
+            <i class="fas fa-upload"></i>
+            <span>${fileName}</span>
+        </div>
+        <div class="upload-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+        </div>
+    `;
+    
+    progressContainer.appendChild(progressItem);
+}
+
+function hideUploadProgress(progressId) {
+    const progressItem = document.getElementById(progressId);
+    if (progressItem) {
+        progressItem.remove();
+    }
+    
+    // Remove container if empty
+    const progressContainer = document.getElementById('uploadProgress');
+    if (progressContainer && progressContainer.children.length === 0) {
+        progressContainer.remove();
+    }
+}
+
+function createUploadProgressContainer() {
+    const container = document.createElement('div');
+    container.id = 'uploadProgress';
+    container.className = 'upload-progress-container';
+    document.body.appendChild(container);
+    return container;
+}
+
+// Rename functionality
+function showRenameDialog(item) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content rename-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Rename ${item.isDirectory ? 'Folder' : 'File'}</h3>
+                <button class="close-btn" onclick="closeRenameDialog()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newFileName">New name:</label>
+                    <input type="text" id="newFileName" value="${item.name}" class="form-control">
+                    <small class="form-text">Enter the new name for this ${item.isDirectory ? 'folder' : 'file'}</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeRenameDialog()" class="btn btn-secondary">Cancel</button>
+                <button onclick="performRename('${item.path}', '${item.name}')" class="btn btn-primary">Rename</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Focus on input and select text
+    const input = document.getElementById('newFileName');
+    input.focus();
+    input.select();
+    
+    // Handle Enter key
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            performRename(item.path, item.name);
+        }
+    });
+    
+    // Handle Escape key
+    modal.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeRenameDialog();
+        }
+    });
+}
+
+function closeRenameDialog() {
+    const modal = document.querySelector('.modal-overlay');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function performRename(oldPath, oldName) {
+    const newName = document.getElementById('newFileName').value.trim();
+    
+    if (!newName) {
+        showNotification('Please enter a valid name', 'error');
+        return;
+    }
+    
+    if (newName === oldName) {
+        closeRenameDialog();
+        return;
+    }
+    
+    // Validate filename
+    const invalidChars = /[<>:"/\\|?*]/;
+    if (invalidChars.test(newName)) {
+        showNotification('Invalid characters in filename. Avoid: < > : " / \\ | ? *', 'error');
+        return;
+    }
+    
+    // Show loading
+    const renameBtn = document.querySelector('.rename-modal .btn-primary');
+    if (renameBtn) {
+        renameBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Renaming...';
+        renameBtn.disabled = true;
+    }
+    
+    fetch('/api/files/rename', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            oldPath: oldPath,
+            newName: newName
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || `Rename failed: ${response.statusText}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        showNotification(`Successfully renamed "${oldName}" to "${newName}"`, 'success');
+        closeRenameDialog();
+        loadFiles(); // Refresh file list
+    })
+    .catch(error => {
+        console.error('Rename error:', error);
+        showNotification(`Error renaming file: ${error.message}`, 'error');
+        
+        // Reset button
+        if (renameBtn) {
+            renameBtn.innerHTML = 'Rename';
+            renameBtn.disabled = false;
+        }
+    });
 }
 
 // Socket.io event handlers
