@@ -108,11 +108,33 @@ function initializeServerControls() {
             .catch(error => showNotification('Error stopping server', 'error'));
     });
     
-    document.getElementById('restartBtn').addEventListener('click', () => {
-        fetch('/api/server/restart', { method: 'POST' })
-            .then(response => response.json())
-            .then(data => showNotification(data.message, 'success'))
-            .catch(error => showNotification('Error restarting server', 'error'));
+    document.getElementById('restartBtn').addEventListener('click', async () => {
+        if (confirm('Are you sure you want to restart the server? This will disconnect all players.')) {
+            // Disable button and show loading state
+            const restartBtn = document.getElementById('restartBtn');
+            restartBtn.disabled = true;
+            restartBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Restarting...';
+            
+            try {
+                const response = await fetch('/api/server/restart', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showNotification('Server restart completed successfully', 'success');
+                } else {
+                    showNotification(`Restart failed: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showNotification(`Restart failed: ${error.message}`, 'error');
+            } finally {
+                // Re-enable button and restore original text
+                restartBtn.disabled = false;
+                restartBtn.innerHTML = '<i class="fas fa-redo"></i> Restart';
+            }
+        }
     });
     
     document.getElementById('killBtn').addEventListener('click', () => {

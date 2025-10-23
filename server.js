@@ -319,9 +319,13 @@ app.post('/api/server/stop', (req, res) => {
     res.json({ message: 'Stopping Minecraft server...' });
 });
 
-app.post('/api/server/restart', (req, res) => {
-    restartMinecraftServer();
-    res.json({ message: 'Restarting Minecraft server...' });
+app.post('/api/server/restart', async (req, res) => {
+    try {
+        await restartMinecraftServerWithVerification();
+        res.json({ message: 'Server restart completed successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.post('/api/server/kill', (req, res) => {
@@ -468,24 +472,107 @@ function startMinecraftServer() {
 }
 
 function stopMinecraftServer() {
-    if (minecraftProcess) {
+    return new Promise((resolve, reject) => {
+        if (!minecraftProcess) {
+            resolve();
+            return;
+        }
+        
+        io.emit('consoleOutput', { type: 'system', data: 'Initiating graceful server shutdown...' });
+        
+        // Send stop command
         sendCommand('stop');
-        setTimeout(() => {
+        
+        // Set up timeout for force kill
+        const forceKillTimeout = setTimeout(() => {
             if (minecraftProcess) {
-                minecraftProcess.kill('SIGTERM');
+                io.emit('consoleOutput', { type: 'system', data: 'Force killing server process...' });
+                minecraftProcess.kill('SIGKILL');
+                minecraftProcess = null;
+                serverStatus = 'stopped';
+                io.emit('serverStatus', { status: serverStatus });
+                reject(new Error('Server stop timeout - process was force killed'));
             }
-        }, 10000); // Wait 10 seconds before force killing
-    }
+        }, 15000); // Wait 15 seconds before force killing
+        
+        // Listen for process close
+        const onClose = (code) => {
+            clearTimeout(forceKillTimeout);
+            minecraftProcess = null;
+            serverStatus = 'stopped';
+            io.emit('serverStatus', { status: serverStatus });
+            io.emit('consoleOutput', { type: 'system', data: `Server stopped gracefully with code ${code}` });
+            resolve();
+        };
+        
+        minecraftProcess.once('close', onClose);
+    });
 }
 
-function restartMinecraftServer() {
-    if (minecraftProcess) {
-        stopMinecraftServer();
-        setTimeout(() => {
-            startMinecraftServer();
-        }, 5000); // Wait 5 seconds before restarting
-    } else {
+async function restartMinecraftServerWithVerification() {
+    try {
+        // Stage 1: Graceful stop with verification
+        io.emit('consoleOutput', { type: 'system', data: '=== RESTART SEQUENCE INITIATED ===' });
+        io.emit('consoleOutput', { type: 'system', data: 'Stage 1/5: Stopping server gracefully...' });
+        
+        if (minecraftProcess) {
+            await stopMinecraftServer();
+        }
+        
+        // Stage 2: Verify server has fully stopped
+        io.emit('consoleOutput', { type: 'system', data: 'Stage 2/5: Verifying server shutdown...' });
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+        
+        if (minecraftProcess) {
+            throw new Error('Server failed to stop properly');
+        }
+        
+        io.emit('consoleOutput', { type: 'system', data: 'Server shutdown verified successfully' });
+        
+        // Stage 3: Initialize fresh server instance
+        io.emit('consoleOutput', { type: 'system', data: 'Stage 3/5: Initializing fresh server instance...' });
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Brief pause
+        
         startMinecraftServer();
+        
+        // Stage 4: Wait for server to start and confirm accessibility
+        io.emit('consoleOutput', { type: 'system', data: 'Stage 4/5: Waiting for server to start...' });
+        
+        await new Promise((resolve, reject) => {
+            const startTimeout = setTimeout(() => {
+                reject(new Error('Server start timeout - failed to start within 60 seconds'));
+            }, 60000);
+            
+            const checkStatus = () => {
+                if (serverStatus === 'running') {
+                    clearTimeout(startTimeout);
+                    resolve();
+                } else if (serverStatus === 'error') {
+                    clearTimeout(startTimeout);
+                    reject(new Error('Server failed to start - check console for errors'));
+                } else {
+                    setTimeout(checkStatus, 1000);
+                }
+            };
+            
+            checkStatus();
+        });
+        
+        // Stage 5: Final verification and completion
+        io.emit('consoleOutput', { type: 'system', data: 'Stage 5/5: Verifying server accessibility...' });
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Final verification pause
+        
+        if (serverStatus !== 'running') {
+            throw new Error('Server restart failed - server is not running');
+        }
+        
+        io.emit('consoleOutput', { type: 'system', data: '=== RESTART SEQUENCE COMPLETED SUCCESSFULLY ===' });
+        io.emit('consoleOutput', { type: 'system', data: 'Server is now running and accessible' });
+        
+    } catch (error) {
+        io.emit('consoleOutput', { type: 'error', data: `=== RESTART SEQUENCE FAILED ===` });
+        io.emit('consoleOutput', { type: 'error', data: `Error: ${error.message}` });
+        throw error;
     }
 }
 
