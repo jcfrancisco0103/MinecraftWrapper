@@ -22,9 +22,25 @@ const io = socketIo(server, {
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true
+}));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Add security headers to prevent blocking
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('X-Content-Type-Options', 'nosniff');
+    res.header('X-Frame-Options', 'DENY');
+    res.header('X-XSS-Protection', '1; mode=block');
+    next();
+});
 
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
@@ -407,8 +423,7 @@ app.get('/api/system', async (req, res) => {
             }))
         });
     } catch (error) {
-        console.error('Files API error:', error);
-        console.error('Request path:', req.query.path);
+        console.error('System API error:', error);
         console.error('Error stack:', error.stack);
         res.status(500).json({ error: error.message });
     }
