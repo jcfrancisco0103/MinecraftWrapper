@@ -468,72 +468,30 @@ function openFileEditor(filePath, content) {
     currentEditingFile = filePath;
     const editorTitle = document.getElementById('editorTitle');
     const fileEditorTextarea = document.getElementById('fileEditorTextarea');
-    const fileEditor = document.querySelector('.file-editor');
-    const fileList = document.getElementById('fileList');
+    const textEditorModal = document.getElementById('textEditorModal');
     
     editorTitle.textContent = `Edit: ${getBasename(filePath)}`;
     
-    // Check if file is a rich text format or plain text
-    const isRichText = filePath.toLowerCase().endsWith('.html') || 
-                      filePath.toLowerCase().endsWith('.htm') || 
-                      filePath.toLowerCase().endsWith('.rtf');
+    // Set content as plain text in textarea
+    fileEditorTextarea.value = content;
     
-    if (isRichText && content.includes('<')) {
-        // Load as HTML content for rich text files
-        fileEditorTextarea.innerHTML = content;
-    } else {
-        // Convert plain text to HTML for rich text editing
-        fileEditorTextarea.innerHTML = content.replace(/\n/g, '<br>').replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
-    }
-    
-    // Hide file list and show editor
-    fileList.style.display = 'none';
-    fileEditor.style.display = 'flex';
-    
-    // Initialize rich text editor
-    initializeRichTextEditor();
+    // Show the modal
+    textEditorModal.style.display = 'block';
     
     // Load editor settings
     loadEditorSettings();
     
-    // Update line numbers and word count
+    // Update line numbers
     updateLineNumbers();
-    updateWordCount();
+    
+    // Focus on textarea
+    fileEditorTextarea.focus();
     
     // Add keyboard shortcuts
     const handleKeyDown = (e) => {
-        // Rich text formatting shortcuts
-        if (e.ctrlKey) {
-            switch(e.key.toLowerCase()) {
-                case 's':
-                    e.preventDefault();
-                    saveFile();
-                    break;
-                case 'b':
-                    e.preventDefault();
-                    formatText('bold');
-                    break;
-                case 'i':
-                    e.preventDefault();
-                    formatText('italic');
-                    break;
-                case 'u':
-                    e.preventDefault();
-                    formatText('underline');
-                    break;
-                case 'z':
-                    e.preventDefault();
-                    if (e.shiftKey) {
-                        document.execCommand('redo');
-                    } else {
-                        document.execCommand('undo');
-                    }
-                    break;
-                case 'y':
-                    e.preventDefault();
-                    document.execCommand('redo');
-                    break;
-            }
+        if (e.ctrlKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            saveFile();
         }
         if (e.key === 'Escape') {
             closeFileEditor();
@@ -548,15 +506,20 @@ function openFileEditor(filePath, content) {
     // Add event listeners for close and cancel buttons
     document.getElementById('closeEditor').onclick = closeFileEditor;
     document.getElementById('cancelEdit').onclick = closeFileEditor;
+    
+    // Close modal when clicking outside
+    textEditorModal.onclick = function(event) {
+        if (event.target === textEditorModal) {
+            closeFileEditor();
+        }
+    };
 }
 
 function closeFileEditor() {
-    const fileEditor = document.querySelector('.file-editor');
-    const fileList = document.getElementById('fileList');
+    const textEditorModal = document.getElementById('textEditorModal');
     
-    // Hide editor and show file list
-    fileEditor.style.display = 'none';
-    fileList.style.display = 'block';
+    // Hide the modal
+    textEditorModal.style.display = 'none';
     currentEditingFile = null;
     
     // Hide settings panel if open
@@ -571,23 +534,8 @@ function saveFile() {
     
     const fileEditorTextarea = document.getElementById('fileEditorTextarea');
     
-    // Get content from rich text editor
-    let content;
-    if (fileEditorTextarea.innerHTML) {
-        // For rich text files, save as HTML
-        if (currentEditingFile.toLowerCase().endsWith('.html') || 
-            currentEditingFile.toLowerCase().endsWith('.htm')) {
-            content = fileEditorTextarea.innerHTML;
-        } else {
-            // For plain text files, convert HTML back to plain text
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = fileEditorTextarea.innerHTML;
-            content = tempDiv.textContent || tempDiv.innerText || '';
-            content = content.replace(/\n\s*\n/g, '\n'); // Clean up extra newlines
-        }
-    } else {
-        content = fileEditorTextarea.textContent || '';
-    }
+    // Get content from textarea
+    const content = fileEditorTextarea.value;
     
     fetch('/api/files/save', {
         method: 'POST',
@@ -616,285 +564,58 @@ function saveFile() {
     });
 }
 
-// Rich Text Editor Functions
-function initializeRichTextEditor() {
-    // Initialize toolbar event listeners
-    initializeToolbarEvents();
-    
-    // Add input event listener for word count updates
-    const editor = document.getElementById('fileEditorTextarea');
-    editor.addEventListener('input', updateWordCount);
-    editor.addEventListener('keyup', updateWordCount);
-    editor.addEventListener('paste', () => setTimeout(updateWordCount, 10));
-}
-
-function initializeToolbarEvents() {
-    // Format buttons
-    document.getElementById('boldBtn')?.addEventListener('click', () => formatText('bold'));
-    document.getElementById('italicBtn')?.addEventListener('click', () => formatText('italic'));
-    document.getElementById('underlineBtn')?.addEventListener('click', () => formatText('underline'));
-    document.getElementById('strikeBtn')?.addEventListener('click', () => formatText('strikeThrough'));
-    
-    // Font controls
-    document.getElementById('fontFamilySelect')?.addEventListener('change', (e) => {
-        formatText('fontName', e.target.value);
-    });
-    document.getElementById('fontSizeSelect')?.addEventListener('change', (e) => {
-        formatText('fontSize', e.target.value);
-    });
-    
-    // Color controls
-    document.getElementById('textColorPicker')?.addEventListener('change', (e) => {
-        formatText('foreColor', e.target.value);
-    });
-    document.getElementById('bgColorPicker')?.addEventListener('change', (e) => {
-        formatText('backColor', e.target.value);
-    });
-    
-    // Alignment buttons
-    document.getElementById('alignLeftBtn')?.addEventListener('click', () => formatText('justifyLeft'));
-    document.getElementById('alignCenterBtn')?.addEventListener('click', () => formatText('justifyCenter'));
-    document.getElementById('alignRightBtn')?.addEventListener('click', () => formatText('justifyRight'));
-    document.getElementById('alignJustifyBtn')?.addEventListener('click', () => formatText('justifyFull'));
-    
-    // List buttons
-    document.getElementById('bulletListBtn')?.addEventListener('click', () => formatText('insertUnorderedList'));
-    document.getElementById('numberedListBtn')?.addEventListener('click', () => formatText('insertOrderedList'));
-    
-    // Indent buttons
-    document.getElementById('indentBtn')?.addEventListener('click', () => formatText('indent'));
-    document.getElementById('outdentBtn')?.addEventListener('click', () => formatText('outdent'));
-    
-    // Undo/Redo buttons
-    document.getElementById('undoBtn')?.addEventListener('click', () => formatText('undo'));
-    document.getElementById('redoBtn')?.addEventListener('click', () => formatText('redo'));
-    
-    // Insert buttons
-    document.getElementById('linkBtn')?.addEventListener('click', insertLink);
-    document.getElementById('imageBtn')?.addEventListener('click', insertImage);
-    document.getElementById('tableBtn')?.addEventListener('click', insertTable);
-    
-    // Export button
-    document.getElementById('exportBtn')?.addEventListener('click', showExportModal);
-    document.getElementById('cancelExport')?.addEventListener('click', hideExportModal);
-    
-    // Find & Replace functionality
-    document.getElementById('findReplaceBtn')?.addEventListener('click', toggleFindReplace);
-    document.getElementById('findInput')?.addEventListener('input', performFind);
-    document.getElementById('findPrevBtn')?.addEventListener('click', findPrevious);
-    document.getElementById('findNextBtn')?.addEventListener('click', findNext);
-    document.getElementById('replaceBtn')?.addEventListener('click', replaceOne);
-    document.getElementById('replaceAllBtn')?.addEventListener('click', replaceAll);
-    document.getElementById('closeFindBtn')?.addEventListener('click', closeFindReplace);
-    
-    // Spell check functionality
-    document.getElementById('spellCheckBtn')?.addEventListener('click', toggleSpellCheck);
-    
-    // Fullscreen functionality
-    document.getElementById('fullscreenBtn')?.addEventListener('click', toggleFullscreen);
-    
-    // Export format selection
-    document.querySelectorAll('.export-option').forEach(option => {
-        option.addEventListener('click', (e) => {
-            const format = e.currentTarget.dataset.format;
-            exportDocument(format);
-        });
-    });
-}
-
-function formatText(command, value = null) {
-    document.execCommand(command, false, value);
-    updateToolbarState();
-}
-
-function updateToolbarState() {
-    // Update button states based on current selection
-    const commands = ['bold', 'italic', 'underline', 'strikeThrough'];
-    commands.forEach(command => {
-        const btn = document.getElementById(command + 'Btn');
-        if (btn) {
-            btn.classList.toggle('active', document.queryCommandState(command));
-        }
-    });
-}
-
-function insertLink() {
-    const url = prompt('Enter URL:');
-    if (url) {
-        formatText('createLink', url);
-    }
-}
-
-function insertImage() {
-    const url = prompt('Enter image URL:');
-    if (url) {
-        formatText('insertImage', url);
-    }
-}
-
-function insertTable() {
-    const rows = prompt('Number of rows:', '3');
-    const cols = prompt('Number of columns:', '3');
-    
-    if (rows && cols) {
-        let tableHTML = '<table border="1"><tbody>';
-        for (let i = 0; i < parseInt(rows); i++) {
-            tableHTML += '<tr>';
-            for (let j = 0; j < parseInt(cols); j++) {
-                tableHTML += '<td>&nbsp;</td>';
-            }
-            tableHTML += '</tr>';
-        }
-        tableHTML += '</tbody></table>';
-        
-        formatText('insertHTML', tableHTML);
-    }
-}
-
-function updateWordCount() {
-    const editor = document.getElementById('fileEditorTextarea');
-    const text = editor.textContent || editor.innerText || '';
-    
-    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-    const chars = text.length;
-    const lines = text.split('\n').length;
-    
-    document.getElementById('wordCount').textContent = `Words: ${words}`;
-    document.getElementById('charCount').textContent = `Characters: ${chars}`;
-    document.getElementById('lineCount').textContent = `Lines: ${lines}`;
-}
-
-function showExportModal() {
-    document.getElementById('exportModal').style.display = 'block';
-}
-
-function hideExportModal() {
-    document.getElementById('exportModal').style.display = 'none';
-}
-
-function exportDocument(format) {
-    const editor = document.getElementById('fileEditorTextarea');
-    const content = editor.innerHTML;
-    const filename = currentEditingFile ? getBasename(currentEditingFile).split('.')[0] : 'document';
-    
-    let exportContent = '';
-    let mimeType = '';
-    let fileExtension = '';
-    
-    switch (format) {
-        case 'html':
-            exportContent = `<!DOCTYPE html><html><head><title>${filename}</title></head><body>${content}</body></html>`;
-            mimeType = 'text/html';
-            fileExtension = 'html';
-            break;
-        case 'txt':
-            exportContent = editor.textContent || editor.innerText || '';
-            mimeType = 'text/plain';
-            fileExtension = 'txt';
-            break;
-        case 'md':
-            exportContent = htmlToMarkdown(content);
-            mimeType = 'text/markdown';
-            fileExtension = 'md';
-            break;
-        case 'pdf':
-            // For PDF export, we'll use the browser's print functionality
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>${filename}</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; margin: 1in; }
-                        @media print { body { margin: 0; } }
-                    </style>
-                </head>
-                <body>${content}</body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.print();
-            hideExportModal();
-            return;
-    }
-    
-    // Create and download file
-    const blob = new Blob([exportContent], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}.${fileExtension}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    hideExportModal();
-}
-
-function htmlToMarkdown(html) {
-    // Simple HTML to Markdown conversion
-    let markdown = html;
-    
-    // Headers
-    markdown = markdown.replace(/<h([1-6])>(.*?)<\/h[1-6]>/g, (match, level, text) => {
-        return '#'.repeat(parseInt(level)) + ' ' + text + '\n\n';
-    });
-    
-    // Bold and italic
-    markdown = markdown.replace(/<strong>(.*?)<\/strong>/g, '**$1**');
-    markdown = markdown.replace(/<b>(.*?)<\/b>/g, '**$1**');
-    markdown = markdown.replace(/<em>(.*?)<\/em>/g, '*$1*');
-    markdown = markdown.replace(/<i>(.*?)<\/i>/g, '*$1*');
-    
-    // Links
-    markdown = markdown.replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)');
-    
-    // Lists
-    markdown = markdown.replace(/<ul>(.*?)<\/ul>/gs, (match, content) => {
-        return content.replace(/<li>(.*?)<\/li>/g, '- $1\n') + '\n';
-    });
-    markdown = markdown.replace(/<ol>(.*?)<\/ol>/gs, (match, content) => {
-        let counter = 1;
-        return content.replace(/<li>(.*?)<\/li>/g, () => `${counter++}. $1\n`) + '\n';
-    });
-    
-    // Paragraphs
-    markdown = markdown.replace(/<p>(.*?)<\/p>/g, '$1\n\n');
-    
-    // Line breaks
-    markdown = markdown.replace(/<br\s*\/?>/g, '\n');
-    
-    // Remove remaining HTML tags
-    markdown = markdown.replace(/<[^>]*>/g, '');
-    
-    // Clean up extra whitespace
-    markdown = markdown.replace(/\n{3,}/g, '\n\n');
-    
-    return markdown.trim();
-}
-
 // Editor Settings and Customization
 function initializeEditorSettings() {
     // Add event listeners for editor controls
-    document.getElementById('settingsBtn').addEventListener('click', toggleSettingsPanel);
-    document.getElementById('fontFamily').addEventListener('change', updateEditorFont);
-    document.getElementById('fontSize').addEventListener('input', updateEditorFont);
-    document.getElementById('fontWeight').addEventListener('change', updateEditorFont);
-    document.getElementById('editorTheme').addEventListener('change', updateEditorTheme);
-    document.getElementById('syntaxHighlighting').addEventListener('change', toggleSyntaxHighlighting);
-    document.getElementById('lineNumbers').addEventListener('change', toggleLineNumbers);
-    document.getElementById('resetSettings').addEventListener('click', resetEditorSettings);
-    document.getElementById('applySettings').addEventListener('click', applyEditorSettings);
+    const settingsBtn = document.getElementById('settingsBtn');
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', toggleSettingsPanel);
+    }
+    
+    const fontFamily = document.getElementById('editorFontFamily');
+    if (fontFamily) {
+        fontFamily.addEventListener('change', updateEditorFont);
+    }
+    
+    const fontSize = document.getElementById('editorFontSize');
+    if (fontSize) {
+        fontSize.addEventListener('input', updateEditorFont);
+    }
+    
+    const fontWeight = document.getElementById('editorFontWeight');
+    if (fontWeight) {
+        fontWeight.addEventListener('change', updateEditorFont);
+    }
+    
+    const editorTheme = document.getElementById('editorTheme');
+    if (editorTheme) {
+        editorTheme.addEventListener('change', updateEditorTheme);
+    }
+    
+    const lineNumbers = document.getElementById('lineNumbers');
+    if (lineNumbers) {
+        lineNumbers.addEventListener('change', toggleLineNumbers);
+    }
+    
+    const resetSettings = document.getElementById('resetSettings');
+    if (resetSettings) {
+        resetSettings.addEventListener('click', resetEditorSettings);
+    }
+    
+    const applySettings = document.getElementById('applySettings');
+    if (applySettings) {
+        applySettings.addEventListener('click', applyEditorSettings);
+    }
     
     // Add event listeners for editor content changes
-    fileEditorTextarea.addEventListener('input', () => {
-        applySyntaxHighlighting();
-        updateLineNumbers();
-    });
-    
-    fileEditorTextarea.addEventListener('scroll', syncGutterScroll);
+    const fileEditorTextarea = document.getElementById('fileEditorTextarea');
+    if (fileEditorTextarea) {
+        fileEditorTextarea.addEventListener('input', () => {
+            updateLineNumbers();
+        });
+        
+        fileEditorTextarea.addEventListener('scroll', syncGutterScroll);
+    }
 }
 
 // Additional editor utility functions

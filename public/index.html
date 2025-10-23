@@ -175,272 +175,106 @@
                 </div>
                 <div class="file-manager-content">
                     <div id="fileList" class="file-list"></div>
-                    <div id="fileEditor" class="file-editor" style="display: none;">
-                        <div class="editor-header">
-                            <div class="editor-title">
-                                <h3 id="editorTitle">Edit File</h3>
-                            </div>
-                            <div class="editor-controls">
-                                <button id="settingsBtn" class="btn-icon" title="Editor Settings">
-                                    <i class="fas fa-cog"></i>
-                                </button>
-                                <button class="btn-icon" title="Word Wrap" onclick="toggleWordWrap()">
-                                    <i class="fas fa-align-left"></i>
-                                </button>
-                                <button class="btn-icon" title="Find & Replace" onclick="showFindReplace()">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                                <button id="closeEditor" class="btn-icon" title="Close Editor">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Rich Text Formatting Toolbar -->
-                        <div class="editor-toolbar">
-                            <div class="toolbar-group">
-                                <button class="toolbar-btn" id="boldBtn" title="Bold (Ctrl+B)">
-                                    <i class="fas fa-bold"></i>
-                                </button>
-                                <button class="toolbar-btn" id="italicBtn" title="Italic (Ctrl+I)">
-                                    <i class="fas fa-italic"></i>
-                                </button>
-                                <button class="toolbar-btn" id="underlineBtn" title="Underline (Ctrl+U)">
-                                    <i class="fas fa-underline"></i>
-                                </button>
-                                <button class="toolbar-btn" id="strikethroughBtn" title="Strikethrough">
-                                    <i class="fas fa-strikethrough"></i>
-                                </button>
-                            </div>
-                            
-                            <div class="toolbar-separator"></div>
-                            
-                            <div class="toolbar-group">
-                                <select class="toolbar-select" id="fontFamilySelect" title="Font Family">
-                                    <option value="Arial, sans-serif">Arial</option>
-                                    <option value="'Times New Roman', serif">Times New Roman</option>
-                                    <option value="'Courier New', monospace">Courier New</option>
-                                    <option value="Helvetica, sans-serif">Helvetica</option>
-                                    <option value="Georgia, serif">Georgia</option>
-                                    <option value="Verdana, sans-serif">Verdana</option>
-                                    <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
-                                    <option value="Impact, sans-serif">Impact</option>
-                                </select>
-                                <select class="toolbar-select" id="fontSizeSelect" title="Font Size">
-                                    <option value="8">8</option>
-                                    <option value="9">9</option>
-                                    <option value="10">10</option>
-                                    <option value="11">11</option>
-                                    <option value="12">12</option>
-                                    <option value="14" selected>14</option>
-                                    <option value="16">16</option>
-                                    <option value="18">18</option>
-                                    <option value="20">20</option>
-                                    <option value="24">24</option>
-                                    <option value="28">28</option>
-                                    <option value="32">32</option>
-                                    <option value="36">36</option>
-                                    <option value="48">48</option>
-                                    <option value="72">72</option>
-                                </select>
-                            </div>
-                            
-                            <div class="toolbar-separator"></div>
-                            
-                            <div class="toolbar-group">
-                                <input type="color" class="toolbar-color" id="textColorPicker" title="Text Color" value="#000000">
-                                <input type="color" class="toolbar-color" id="backgroundColorPicker" title="Background Color" value="#ffffff">
-                            </div>
-                            
-                            <div class="toolbar-separator"></div>
-                            
-                            <div class="toolbar-group">
-                                <button class="toolbar-btn" id="alignLeftBtn" title="Align Left">
-                                    <i class="fas fa-align-left"></i>
-                                </button>
-                                <button class="toolbar-btn" id="alignCenterBtn" title="Align Center">
-                                    <i class="fas fa-align-center"></i>
-                                </button>
-                                <button class="toolbar-btn" id="alignRightBtn" title="Align Right">
-                                    <i class="fas fa-align-right"></i>
-                                </button>
-                                <button class="toolbar-btn" id="alignJustifyBtn" title="Justify">
-                                    <i class="fas fa-align-justify"></i>
-                                </button>
-                            </div>
-                            
-                            <div class="toolbar-separator"></div>
-                            
-                            <div class="toolbar-group">
-                                <button class="toolbar-btn" id="bulletListBtn" title="Bullet List">
-                                    <i class="fas fa-list-ul"></i>
-                                </button>
-                                <button class="toolbar-btn" id="numberedListBtn" title="Numbered List">
-                                    <i class="fas fa-list-ol"></i>
-                                </button>
-                                <button class="toolbar-btn" id="indentBtn" title="Increase Indent">
-                                    <i class="fas fa-indent"></i>
-                                </button>
-                                <button class="toolbar-btn" id="outdentBtn" title="Decrease Indent">
-                                    <i class="fas fa-outdent"></i>
-                                </button>
-                            </div>
-                            
-                            <div class="toolbar-separator"></div>
-                            
-                            <div class="toolbar-group">
-                                <button class="toolbar-btn" id="undoBtn" title="Undo (Ctrl+Z)">
-                                    <i class="fas fa-undo"></i>
-                                </button>
-                                <button class="toolbar-btn" id="redoBtn" title="Redo (Ctrl+Y)">
-                                    <i class="fas fa-redo"></i>
-                                </button>
-                            </div>
-                            
-                            <div class="toolbar-separator"></div>
-                            
-                            <div class="toolbar-group">
-                                <button class="toolbar-btn" id="linkBtn" title="Insert Link">
-                                    <i class="fas fa-link"></i>
-                                </button>
-                                <button class="toolbar-btn" id="imageBtn" title="Insert Image">
-                                    <i class="fas fa-image"></i>
-                                </button>
-                                <button class="toolbar-btn" id="tableBtn" title="Insert Table">
-                                    <i class="fas fa-table"></i>
-                                </button>
-                            </div>
-                            
-                            <div class="toolbar-separator"></div>
-                            
-                            <div class="toolbar-group">
-                                <button class="toolbar-btn" id="findReplaceBtn" title="Find & Replace (Ctrl+F)">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                                <button class="toolbar-btn" id="spellCheckBtn" title="Toggle Spell Check">
-                                    <i class="fas fa-spell-check"></i>
-                                </button>
-                                <button class="toolbar-btn" id="fullscreenBtn" title="Toggle Fullscreen">
-                                    <i class="fas fa-expand"></i>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="editor-settings-panel" id="editorSettingsPanel">
-                            <div class="settings-group">
-                                <h4><i class="fas fa-font"></i> Font Settings</h4>
-                                <div class="setting-item">
-                                    <label for="fontFamily">Font Family:</label>
-                                    <select id="fontFamily">
-                                        <option value="'Courier New', monospace">Courier New</option>
-                                        <option value="'Monaco', monospace">Monaco</option>
-                                        <option value="'Menlo', monospace">Menlo</option>
-                                        <option value="'Consolas', monospace">Consolas</option>
-                                        <option value="'DejaVu Sans Mono', monospace">DejaVu Sans Mono</option>
-                                        <option value="'Liberation Mono', monospace">Liberation Mono</option>
-                                        <option value="'Source Code Pro', monospace">Source Code Pro</option>
-                                        <option value="'Fira Code', monospace">Fira Code</option>
-                                    </select>
-                                </div>
-                                <div class="setting-item">
-                                    <label for="fontSize">Font Size:</label>
-                                    <input type="range" id="fontSize" min="10" max="24" value="14" step="1">
-                                    <span id="fontSizeValue">14px</span>
-                                </div>
-                                <div class="setting-item">
-                                    <label for="fontWeight">Font Weight:</label>
-                                    <select id="fontWeight">
-                                        <option value="normal">Normal</option>
-                                        <option value="bold">Bold</option>
-                                        <option value="lighter">Lighter</option>
-                                        <option value="500">Medium</option>
-                                        <option value="600">Semi-Bold</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="settings-group">
-                                <h4><i class="fas fa-palette"></i> Color Theme</h4>
-                                <div class="setting-item">
-                                    <label for="editorTheme">Theme:</label>
-                                    <select id="editorTheme">
-                                        <option value="dark">Dark</option>
-                                        <option value="light">Light</option>
-                                        <option value="monokai">Monokai</option>
-                                        <option value="solarized">Solarized Dark</option>
-                                        <option value="github">GitHub</option>
-                                    </select>
-                                </div>
-                                <div class="setting-item">
-                                    <label>
-                                        <input type="checkbox" id="syntaxHighlighting" checked>
-                                        Enable Syntax Highlighting
-                                    </label>
-                                </div>
-                                <div class="setting-item">
-                                    <label>
-                                        <input type="checkbox" id="lineNumbers" checked>
-                                        Show Line Numbers
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="settings-actions">
-                                <button id="resetSettings" class="btn btn-secondary">
-                                    <i class="fas fa-undo"></i> Reset to Default
-                                </button>
-                                <button id="applySettings" class="btn btn-primary">
-                                    <i class="fas fa-check"></i> Apply Settings
-                                </button>
-                            </div>
-                        </div>
-                        <div class="editor-container">
-                            <div id="editorGutter" class="editor-gutter"></div>
-                            <div id="fileEditorTextarea" class="rich-text-editor" contenteditable="true" placeholder="File content..."></div>
-                        </div>
-                        
-                        <!-- Find & Replace Panel -->
-                        <div class="find-replace-panel" id="findReplacePanel" style="display: none;">
-                            <div class="find-replace-content">
-                                <div class="find-replace-row">
-                                    <label for="findInput">Find:</label>
-                                    <input type="text" id="findInput" placeholder="Enter text to find">
-                                    <button class="find-btn" id="findPrevBtn" title="Find Previous">↑</button>
-                                    <button class="find-btn" id="findNextBtn" title="Find Next">↓</button>
-                                    <span class="find-count" id="findCount">0 of 0</span>
-                                </div>
-                                <div class="find-replace-row">
-                                    <label for="replaceInput">Replace:</label>
-                                    <input type="text" id="replaceInput" placeholder="Enter replacement text">
-                                    <button class="replace-btn" id="replaceBtn">Replace</button>
-                                    <button class="replace-btn" id="replaceAllBtn">Replace All</button>
-                                </div>
-                                <div class="find-replace-options">
-                                    <label><input type="checkbox" id="matchCaseCheck"> Match case</label>
-                                    <label><input type="checkbox" id="wholeWordCheck"> Whole word</label>
-                                    <label><input type="checkbox" id="regexCheck"> Regular expression</label>
-                                    <button class="close-find-btn" id="closeFindBtn" title="Close">×</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="editor-footer">
-                            <div class="editor-status">
-                                <span id="wordCount">Words: 0</span>
-                                <span id="charCount">Characters: 0</span>
-                                <span id="lineCount">Lines: 1</span>
-                            </div>
-                            <div class="editor-actions">
-                                <button id="exportBtn" class="btn btn-info">
-                                    <i class="fas fa-download"></i> Export
-                                </button>
-                                <button id="saveFile" class="btn btn-success">
-                                    <i class="fas fa-save"></i> Save
-                                </button>
-                                <button id="cancelEdit" class="btn btn-secondary">
-                                    <i class="fas fa-times"></i> Cancel
-                                </button>
-                            </div>
-                        </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Text Editor Modal -->
+        <div id="textEditorModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="editorTitle">Edit File</h3>
+                    <div class="editor-controls">
+                        <button id="settingsBtn" class="btn-icon" title="Editor Settings">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                        <button class="btn-icon" title="Word Wrap" onclick="toggleWordWrap()">
+                            <i class="fas fa-align-left"></i>
+                        </button>
+                        <button class="btn-icon" title="Find & Replace" onclick="showFindReplace()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        <span class="close" id="closeEditor">&times;</span>
                     </div>
                 </div>
+                
+                <div class="editor-settings-panel" id="editorSettingsPanel">
+                    <div class="settings-group">
+                        <h4><i class="fas fa-font"></i> Font Settings</h4>
+                        <div class="setting-item">
+                            <label for="editorFontFamily">Font Family:</label>
+                            <select id="editorFontFamily">
+                                <option value="'Courier New', monospace">Courier New</option>
+                                <option value="'Monaco', monospace">Monaco</option>
+                                <option value="'Menlo', monospace">Menlo</option>
+                                <option value="'Ubuntu Mono', monospace">Ubuntu Mono</option>
+                                <option value="'Consolas', monospace">Consolas</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label for="editorFontSize">Font Size:</label>
+                            <input type="range" id="editorFontSize" min="10" max="24" value="14">
+                            <span id="fontSizeValue">14px</span>
+                        </div>
+                        <div class="setting-item">
+                            <label for="editorFontWeight">Font Weight:</label>
+                            <select id="editorFontWeight">
+                                <option value="normal">Normal</option>
+                                <option value="bold">Bold</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <h4><i class="fas fa-palette"></i> Theme</h4>
+                        <div class="setting-item">
+                            <label for="editorTheme">Theme:</label>
+                            <select id="editorTheme">
+                                <option value="dark">Dark</option>
+                                <option value="light">Light</option>
+                                <option value="monokai">Monokai</option>
+                                <option value="solarized">Solarized</option>
+                                <option value="github">GitHub</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <h4><i class="fas fa-cogs"></i> Editor Options</h4>
+                        <div class="setting-item">
+                            <input type="checkbox" id="lineNumbers" checked>
+                            <label for="lineNumbers">Show Line Numbers</label>
+                        </div>
+                        <div class="setting-item">
+                            <input type="checkbox" id="wordWrap">
+                            <label for="wordWrap">Word Wrap</label>
+                        </div>
+                        <div class="setting-item">
+                            <input type="checkbox" id="autoSave">
+                            <label for="autoSave">Auto Save</label>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-actions">
+                        <button id="applySettings" class="btn btn-primary">Apply</button>
+                        <button id="resetSettings" class="btn btn-secondary">Reset</button>
+                    </div>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="editor-container">
+                        <div id="editorGutter" class="editor-gutter"></div>
+                        <textarea id="fileEditorTextarea" placeholder="File content..."></textarea>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button id="cancelEdit" class="btn btn-secondary">Cancel</button>
+                    <button id="saveFile" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                </div>
+            </div>
             </div>
         </div>
 

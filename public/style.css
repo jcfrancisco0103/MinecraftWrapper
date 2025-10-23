@@ -804,48 +804,70 @@ body {
 }
 
 /* Editor Themes */
-/* File Editor Styles */
-.file-editor {
-    display: none;
-    flex-direction: column;
-    height: 100%;
-    background: var(--bg-color);
-    border-radius: 8px;
-    overflow: hidden;
+/* Text Editor Modal Styles */
+#textEditorModal {
+    z-index: 1000;
 }
 
-.editor-header {
+#textEditorModal .modal-content {
+    width: 90%;
+    max-width: 1200px;
+    height: 80vh;
+    max-height: 800px;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    background: #2d2d2d;
+    padding: 15px 20px;
+    border-bottom: 1px solid #333;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem;
-    background: var(--header-bg);
-    border-bottom: 1px solid var(--border-color);
+    border-radius: 8px 8px 0 0;
 }
 
-.editor-title h3 {
+.modal-header h3 {
     margin: 0;
-    color: var(--text-color);
-    font-size: 1.1rem;
+    color: #fff;
+    font-size: 18px;
 }
 
 .editor-controls {
     display: flex;
-    gap: 0.5rem;
+    gap: 8px;
+    align-items: center;
 }
 
 .btn-icon {
-    background: none;
-    border: none;
-    color: var(--text-color);
-    cursor: pointer;
-    padding: 0.5rem;
+    background: transparent;
+    border: 1px solid #555;
+    color: #ccc;
+    padding: 6px 10px;
     border-radius: 4px;
-    transition: background-color 0.2s;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
 }
 
 .btn-icon:hover {
-    background: var(--hover-bg);
+    background: #444;
+    border-color: #666;
+    color: #fff;
+}
+
+.modal-header .close {
+    color: #ccc;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0 5px;
+    transition: color 0.2s;
+}
+
+.modal-header .close:hover {
+    color: #fff;
 }
 
 .editor-container {
