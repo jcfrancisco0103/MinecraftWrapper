@@ -21,29 +21,71 @@ A beautiful, cross-platform web-based Minecraft server management tool with real
 
 ## Installation
 
-1. **Clone or download this project**
-   ```bash
-   git clone <repository-url>
-   cd MinecraftWrapper
-   ```
+### Quick Installation
 
-2. **Install dependencies**
+#### Windows
+1. **Download** or clone this repository
+2. **Run the installer** as Administrator:
+   ```cmd
+   install.bat
+   ```
+3. **Follow the prompts** - the installer will:
+   - Check and install Node.js (if needed)
+   - Check and install Java (if needed)
+   - Install all dependencies
+   - Set up the project structure
+   - Create desktop shortcuts and start scripts
+
+#### Ubuntu/Linux
+1. **Download** or clone this repository
+2. **Make the installer executable** and run it:
+   ```bash
+   chmod +x install.sh
+   ./install.sh
+   ```
+3. **Follow the prompts** - the installer will:
+   - Detect your Linux distribution
+   - Install Node.js and Java (if needed)
+   - Install all dependencies
+   - Set up the project structure
+   - Create systemd service files
+
+### Manual Installation
+
+#### Prerequisites
+- **Node.js** (version 14 or higher) - [Download here](https://nodejs.org/)
+- **Java** (version 17 or higher) - [Download here](https://adoptium.net/)
+- **Minecraft Server JAR** - [Download here](https://www.minecraft.net/en-us/download/server)
+
+#### Setup Steps
+1. **Clone or download** this repository
+2. **Install dependencies**:
    ```bash
    npm install
    ```
-
-3. **Set up your Minecraft server**
-   - Create a `minecraft-server` folder in the project root
-   - Place your Minecraft server JAR file in the folder and rename it to `server.jar`
-   - Ensure you have accepted the EULA by creating/editing `eula.txt` with `eula=true`
-
-4. **Start the wrapper**
+3. **Create minecraft-server directory**:
+   ```bash
+   mkdir minecraft-server
+   ```
+4. **Place your Minecraft server JAR** in the `minecraft-server` folder and rename it to `server.jar`
+5. **Accept the EULA** by editing `minecraft-server/eula.txt` and setting `eula=true`
+6. **Start the wrapper**:
    ```bash
    npm start
    ```
+7. **Access the web interface** at `http://localhost:5900`
 
-5. **Access the web interface**
-   - Open your browser and go to `http://localhost:5900`
+### Interactive Setup
+After installation, you can run the interactive setup to configure your server:
+```bash
+node setup.js
+```
+This will guide you through configuring:
+- Web interface port
+- RAM allocation
+- Aikar's optimization flags
+- Minecraft server settings
+- RCON configuration
 
 ## Configuration
 
@@ -87,16 +129,28 @@ The wrapper includes Aikar's optimization flags by default. These can be toggled
 
 ```
 MinecraftWrapper/
-├── server.js              # Main server file
-├── package.json           # Dependencies and scripts
-├── public/                # Web interface files
-│   ├── index.html        # Main HTML file
-│   ├── style.css         # Styles
-│   └── script.js         # Client-side JavaScript
-├── minecraft-server/      # Your Minecraft server files
-│   ├── server.jar        # Minecraft server JAR
-│   ├── eula.txt          # EULA acceptance
-│   └── ...               # Other server files
+├── server.js              # Main server application
+├── package.json           # Node.js dependencies
+├── index.html            # Web interface
+├── style.css             # Web interface styles
+├── script.js             # Client-side JavaScript
+├── setup.js              # Interactive setup script
+├── config.json           # Wrapper configuration (created by setup)
+├── install.bat           # Windows installer
+├── install.sh            # Linux/Ubuntu installer
+├── uninstall.bat         # Windows uninstaller
+├── start.bat             # Windows start script (created by installer)
+├── start.sh              # Linux start script (created by installer)
+├── install-service.bat   # Windows service installer (created by installer)
+├── install-service.sh    # Linux service installer (created by installer)
+├── minecraft-wrapper.service # Systemd service file (created by installer)
+├── minecraft-server/     # Minecraft server directory
+│   ├── server.jar        # Your Minecraft server JAR
+│   ├── server.properties # Server configuration
+│   ├── eula.txt          # Minecraft EULA
+│   ├── world/            # World files
+│   ├── logs/             # Server logs
+│   └── plugins/          # Server plugins (if applicable)
 └── README.md             # This file
 ```
 
