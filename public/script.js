@@ -50,8 +50,8 @@ const consoleOutput = document.getElementById('consoleOutput');
 const commandInput = document.getElementById('commandInput');
 const fileList = document.getElementById('fileList');
 const currentPathEl = document.getElementById('currentPath');
-const fileEditorModal = document.getElementById('fileEditorModal');
 const fileEditor = document.getElementById('fileEditor');
+const fileEditorTextarea = document.getElementById('fileEditorTextarea');
 const editorTitle = document.getElementById('editorTitle');
 
 // Initialize the application
@@ -204,17 +204,8 @@ function initializeFileManager() {
         loadFiles();
     });
     
-    // Modal functionality
-    document.querySelector('.close').addEventListener('click', closeFileEditor);
-    document.getElementById('cancelEdit').addEventListener('click', closeFileEditor);
+    // Editor functionality
     document.getElementById('saveFile').addEventListener('click', saveFile);
-    
-    // Close modal when clicking outside
-    window.addEventListener('click', (e) => {
-        if (e.target === fileEditorModal) {
-            closeFileEditor();
-        }
-    });
 }
 
 function loadFiles(path = currentPath) {
@@ -475,8 +466,17 @@ function deleteFile(filePath, fileName) {
 
 function openFileEditor(filePath, content) {
     currentEditingFile = filePath;
+    const editorTitle = document.getElementById('editorTitle');
+    const fileEditorTextarea = document.getElementById('fileEditorTextarea');
+    const fileEditor = document.querySelector('.file-editor');
+    const fileList = document.getElementById('fileList');
+    
     editorTitle.textContent = `Edit: ${getBasename(filePath)}`;
-    fileEditor.value = content;
+    fileEditorTextarea.value = content;
+    
+    // Hide file list and show editor
+    fileList.style.display = 'none';
+    fileEditor.style.display = 'flex';
     
     // Load editor settings
     loadEditorSettings();
@@ -499,15 +499,22 @@ function openFileEditor(filePath, content) {
     };
     
     // Remove existing event listener if any
-    fileEditor.removeEventListener('keydown', handleKeyDown);
+    fileEditorTextarea.removeEventListener('keydown', handleKeyDown);
     // Add new event listener
-    fileEditor.addEventListener('keydown', handleKeyDown);
+    fileEditorTextarea.addEventListener('keydown', handleKeyDown);
     
-    fileEditorModal.style.display = 'block';
+    // Add event listeners for close and cancel buttons
+    document.getElementById('closeEditor').onclick = closeFileEditor;
+    document.getElementById('cancelEdit').onclick = closeFileEditor;
 }
 
 function closeFileEditor() {
-    fileEditorModal.style.display = 'none';
+    const fileEditor = document.querySelector('.file-editor');
+    const fileList = document.getElementById('fileList');
+    
+    // Hide editor and show file list
+    fileEditor.style.display = 'none';
+    fileList.style.display = 'block';
     currentEditingFile = null;
     
     // Hide settings panel if open
@@ -520,6 +527,8 @@ function closeFileEditor() {
 function saveFile() {
     if (!currentEditingFile) return;
     
+    const fileEditorTextarea = document.getElementById('fileEditorTextarea');
+    
     fetch('/api/files/save', {
         method: 'POST',
         headers: {
@@ -527,17 +536,22 @@ function saveFile() {
         },
         body: JSON.stringify({
             path: currentEditingFile,
-            content: fileEditor.value
+            content: fileEditorTextarea.value
         })
     })
     .then(response => response.json())
     .then(data => {
-        showNotification(data.message, 'success');
-        closeFileEditor();
-        // Automatically refresh the file list to show updated files
-        loadFiles(currentPath);
+        if (data.success) {
+            showNotification('File saved successfully', 'success');
+            closeFileEditor();
+            // Refresh the file list to show any changes
+            loadFiles(currentPath);
+        } else {
+            showNotification('Error saving file: ' + data.error, 'error');
+        }
     })
     .catch(error => {
+        console.error('Error saving file:', error);
         showNotification('Error saving file', 'error');
     });
 }
@@ -550,23 +564,23 @@ function initializeEditorSettings() {
     document.getElementById('fontSize').addEventListener('input', updateEditorFont);
     document.getElementById('fontWeight').addEventListener('change', updateEditorFont);
     document.getElementById('editorTheme').addEventListener('change', updateEditorTheme);
-    document.getElementById('syntaxHighlight').addEventListener('change', toggleSyntaxHighlighting);
+    document.getElementById('syntaxHighlighting').addEventListener('change', toggleSyntaxHighlighting);
     document.getElementById('lineNumbers').addEventListener('change', toggleLineNumbers);
     document.getElementById('resetSettings').addEventListener('click', resetEditorSettings);
     document.getElementById('applySettings').addEventListener('click', applyEditorSettings);
     
     // Add event listeners for editor content changes
-    fileEditor.addEventListener('input', () => {
+    fileEditorTextarea.addEventListener('input', () => {
         applySyntaxHighlighting();
         updateLineNumbers();
     });
     
-    fileEditor.addEventListener('scroll', syncGutterScroll);
+    fileEditorTextarea.addEventListener('scroll', syncGutterScroll);
 }
 
 // Additional editor utility functions
 function toggleWordWrap() {
-    const editor = document.getElementById('fileEditor');
+    const editor = document.getElementById('fileEditorTextarea');
     if (editor.style.whiteSpace === 'pre-wrap') {
         editor.style.whiteSpace = 'pre';
         showNotification('Word wrap disabled', 'info');
@@ -580,11 +594,11 @@ function showFindReplace() {
     // Simple find functionality - in a production app you'd want a proper find/replace dialog
     const searchTerm = prompt('Find text:');
     if (searchTerm) {
-        const content = fileEditor.value;
+        const content = fileEditorTextarea.value;
         const index = content.toLowerCase().indexOf(searchTerm.toLowerCase());
         if (index !== -1) {
-            fileEditor.focus();
-            fileEditor.setSelectionRange(index, index + searchTerm.length);
+            fileEditorTextarea.focus();
+            fileEditorTextarea.setSelectionRange(index, index + searchTerm.length);
             showNotification(`Found "${searchTerm}"`, 'success');
         } else {
             showNotification(`"${searchTerm}" not found`, 'warning');
@@ -606,7 +620,7 @@ function loadEditorSettings() {
     document.getElementById('fontSizeValue').textContent = settings.fontSize + 'px';
     document.getElementById('fontWeight').value = settings.fontWeight;
     document.getElementById('editorTheme').value = settings.theme;
-    document.getElementById('syntaxHighlight').checked = settings.syntaxHighlight;
+    document.getElementById('syntaxHighlighting').checked = settings.syntaxHighlighting;
     document.getElementById('lineNumbers').checked = settings.lineNumbers;
     
     applyEditorSettings();
@@ -618,7 +632,7 @@ function getDefaultSettings() {
         fontSize: 14,
         fontWeight: 'normal',
         theme: 'dark',
-        syntaxHighlight: true,
+        syntaxHighlighting: true,
         lineNumbers: true
     };
 }
@@ -630,9 +644,9 @@ function updateEditorFont() {
     
     document.getElementById('fontSizeValue').textContent = fontSize + 'px';
     
-    fileEditor.style.fontFamily = fontFamily;
-    fileEditor.style.fontSize = fontSize + 'px';
-    fileEditor.style.fontWeight = fontWeight;
+    fileEditorTextarea.style.fontFamily = fontFamily;
+    fileEditorTextarea.style.fontSize = fontSize + 'px';
+    fileEditorTextarea.style.fontWeight = fontWeight;
     
     // Update gutter font to match
     const gutter = document.getElementById('editorGutter');
@@ -648,10 +662,10 @@ function updateEditorTheme() {
     const theme = document.getElementById('editorTheme').value;
     
     // Remove all theme classes
-    fileEditor.className = fileEditor.className.replace(/theme-\w+/g, '');
+    fileEditorTextarea.className = fileEditorTextarea.className.replace(/theme-\w+/g, '');
     
     // Add new theme class
-    fileEditor.classList.add(`theme-${theme}`);
+    fileEditorTextarea.classList.add(`theme-${theme}`);
     
     // Update gutter theme
     const gutter = document.getElementById('editorGutter');
@@ -664,20 +678,26 @@ function updateEditorTheme() {
 }
 
 function toggleSyntaxHighlighting() {
-    const enabled = document.getElementById('syntaxHighlight').checked;
+    const syntaxElement = document.getElementById('syntaxHighlighting');
+    if (!syntaxElement) return;
+    
+    const enabled = syntaxElement.checked;
     
     if (enabled) {
         applySyntaxHighlighting();
     } else {
         // Remove syntax highlighting
-        fileEditor.innerHTML = fileEditor.value;
+        fileEditorTextarea.innerHTML = fileEditorTextarea.value;
     }
     
     saveEditorSettings();
 }
 
 function toggleLineNumbers() {
-    const enabled = document.getElementById('lineNumbers').checked;
+    const lineNumbersElement = document.getElementById('lineNumbers');
+    if (!lineNumbersElement) return;
+    
+    const enabled = lineNumbersElement.checked;
     const gutter = document.getElementById('editorGutter');
     
     if (gutter) {
@@ -688,9 +708,10 @@ function toggleLineNumbers() {
 }
 
 function applySyntaxHighlighting() {
-    if (!document.getElementById('syntaxHighlight').checked) return;
+    const syntaxElement = document.getElementById('syntaxHighlighting');
+    if (!syntaxElement || !syntaxElement.checked) return;
     
-    const content = fileEditor.value;
+    const content = fileEditorTextarea.value;
     const fileExtension = currentEditingFile ? currentEditingFile.split('.').pop().toLowerCase() : '';
     
     // Basic syntax highlighting for common file types
@@ -739,7 +760,7 @@ function updateLineNumbers() {
     const gutter = document.getElementById('editorGutter');
     if (!gutter) return;
     
-    const lines = fileEditor.value.split('\n');
+    const lines = fileEditorTextarea.value.split('\n');
     const lineNumbers = lines.map((_, index) => index + 1).join('\n');
     gutter.textContent = lineNumbers;
 }
@@ -747,18 +768,25 @@ function updateLineNumbers() {
 function syncGutterScroll() {
     const gutter = document.getElementById('editorGutter');
     if (gutter) {
-        gutter.scrollTop = fileEditor.scrollTop;
+        gutter.scrollTop = fileEditorTextarea.scrollTop;
     }
 }
 
 function saveEditorSettings() {
+    const fontFamilyEl = document.getElementById('fontFamily');
+    const fontSizeEl = document.getElementById('fontSize');
+    const fontWeightEl = document.getElementById('fontWeight');
+    const themeEl = document.getElementById('editorTheme');
+    const syntaxEl = document.getElementById('syntaxHighlighting');
+    const lineNumbersEl = document.getElementById('lineNumbers');
+    
     const settings = {
-        fontFamily: document.getElementById('fontFamily').value,
-        fontSize: parseInt(document.getElementById('fontSize').value),
-        fontWeight: document.getElementById('fontWeight').value,
-        theme: document.getElementById('editorTheme').value,
-        syntaxHighlight: document.getElementById('syntaxHighlight').checked,
-        lineNumbers: document.getElementById('lineNumbers').checked
+        fontFamily: fontFamilyEl ? fontFamilyEl.value : 'monospace',
+        fontSize: fontSizeEl ? parseInt(fontSizeEl.value) : 14,
+        fontWeight: fontWeightEl ? fontWeightEl.value : 'normal',
+        theme: themeEl ? themeEl.value : 'light',
+        syntaxHighlighting: syntaxEl ? syntaxEl.checked : true,
+        lineNumbers: lineNumbersEl ? lineNumbersEl.checked : true
     };
     
     localStorage.setItem('editorSettings', JSON.stringify(settings));
@@ -772,7 +800,7 @@ function resetEditorSettings() {
     document.getElementById('fontSizeValue').textContent = defaultSettings.fontSize + 'px';
     document.getElementById('fontWeight').value = defaultSettings.fontWeight;
     document.getElementById('editorTheme').value = defaultSettings.theme;
-    document.getElementById('syntaxHighlight').checked = defaultSettings.syntaxHighlight;
+    document.getElementById('syntaxHighlighting').checked = defaultSettings.syntaxHighlighting;
     document.getElementById('lineNumbers').checked = defaultSettings.lineNumbers;
     
     applyEditorSettings();

@@ -709,82 +709,202 @@ body {
 }
 
 /* Editor Themes */
-#fileEditor {
-    width: 100%;
+/* File Editor Styles */
+.file-editor {
+    display: none;
+    flex-direction: column;
     height: 100%;
+    background: var(--bg-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.editor-title h3 {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 1.1rem;
+}
+
+.editor-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-icon {
+    background: none;
     border: none;
-    padding: 15px;
+    color: var(--text-color);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.btn-icon:hover {
+    background: var(--hover-bg);
+}
+
+.editor-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.editor-gutter {
+    background: var(--gutter-bg);
+    color: var(--gutter-text);
+    padding: 1rem 0.5rem;
     font-family: 'Courier New', monospace;
     font-size: 14px;
-    font-weight: normal;
-    resize: none;
+    line-height: 1.5;
+    text-align: right;
+    border-right: 1px solid var(--border-color);
+    user-select: none;
+    overflow: hidden;
+    white-space: pre;
+    min-width: 50px;
+}
+
+#fileEditorTextarea {
+    flex: 1;
+    border: none;
     outline: none;
-    line-height: 1.4;
-    tab-size: 4;
+    padding: 1rem;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    background: var(--editor-bg);
+    color: var(--editor-text);
+    resize: none;
     white-space: pre;
     overflow-wrap: normal;
     overflow-x: auto;
 }
 
-/* Dark Theme (Default) */
-#fileEditor.theme-dark {
+#fileEditorTextarea.theme-dark {
     background: #1e1e1e;
     color: #d4d4d4;
 }
 
-#fileEditor.theme-dark::-webkit-scrollbar {
+#fileEditorTextarea.theme-dark::-webkit-scrollbar {
     width: 12px;
     height: 12px;
 }
 
-#fileEditor.theme-dark::-webkit-scrollbar-track {
+#fileEditorTextarea.theme-dark::-webkit-scrollbar-track {
     background: #2d2d30;
 }
 
-#fileEditor.theme-dark::-webkit-scrollbar-thumb {
+#fileEditorTextarea.theme-dark::-webkit-scrollbar-thumb {
     background: #424242;
     border-radius: 6px;
 }
 
-#fileEditor.theme-dark::-webkit-scrollbar-thumb:hover {
+#fileEditorTextarea.theme-dark::-webkit-scrollbar-thumb:hover {
     background: #4f4f4f;
 }
 
-/* Light Theme */
-#fileEditor.theme-light {
+#fileEditorTextarea.theme-light {
     background: #ffffff;
-    color: #24292e;
+    color: #333333;
 }
 
-#fileEditor.theme-light::-webkit-scrollbar-track {
-    background: #f6f8fa;
+#fileEditorTextarea.theme-light::-webkit-scrollbar-track {
+    background: #f1f1f1;
 }
 
-#fileEditor.theme-light::-webkit-scrollbar-thumb {
-    background: #d1d5da;
+#fileEditorTextarea.theme-light::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
     border-radius: 6px;
 }
 
-#fileEditor.theme-light::-webkit-scrollbar-thumb:hover {
-    background: #c6cbd1;
+#fileEditorTextarea.theme-light::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
 
-/* Monokai Theme */
-#fileEditor.theme-monokai {
+#fileEditorTextarea.theme-monokai {
     background: #272822;
     color: #f8f8f2;
 }
 
-/* Solarized Theme */
-#fileEditor.theme-solarized {
+#fileEditorTextarea.theme-solarized {
     background: #002b36;
     color: #839496;
 }
 
-/* GitHub Theme */
-#fileEditor.theme-github {
-    background: #f6f8fa;
+#fileEditorTextarea.theme-github {
+    background: #ffffff;
     color: #24292e;
+}
+
+.editor-footer {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--header-bg);
+    border-top: 1px solid var(--border-color);
+}
+
+.editor-settings-panel {
+    display: none;
+    background: var(--panel-bg);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem;
+}
+
+.editor-settings-panel.active {
+    display: block;
+}
+
+.settings-group {
+    margin-bottom: 1.5rem;
+}
+
+.settings-group h4 {
+    margin: 0 0 1rem 0;
+    color: var(--text-color);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.setting-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.setting-item label {
+    color: var(--text-color);
+    min-width: 100px;
+}
+
+.setting-item select,
+.setting-item input[type="range"] {
+    flex: 1;
+    max-width: 200px;
+}
+
+.settings-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+#fileEditorTextarea:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: -2px;
 }
 
 /* Syntax Highlighting Classes */
