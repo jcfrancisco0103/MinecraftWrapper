@@ -547,7 +547,7 @@ function saveFile() {
             // Refresh the file list to show any changes
             loadFiles(currentPath);
         } else {
-            showNotification('Error saving file: ' + data.error, 'error');
+            showNotification('Error saving file: ' + (data.error || 'Unknown error'), 'error');
         }
     })
     .catch(error => {

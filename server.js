@@ -203,9 +203,9 @@ app.post('/api/files/save', async (req, res) => {
     try {
         const { path: filePath, content } = req.body;
         await fs.writeFile(filePath, content, 'utf8');
-        res.json({ message: 'File saved successfully' });
+        res.json({ success: true, message: 'File saved successfully' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
