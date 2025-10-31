@@ -964,9 +964,9 @@ body {
     background: var(--bg-card);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-xl);
-    max-width: 500px;
-    width: 90%;
-    max-height: 80vh;
+    max-width: 900px;
+    width: 95%;
+    max-height: 90vh;
     overflow: hidden;
     animation: modalSlideIn 0.3s ease-out;
 }
@@ -1003,7 +1003,7 @@ body {
 
 .modal-body {
     padding: var(--spacing-lg);
-    max-height: 60vh;
+    max-height: 75vh;
     overflow-y: auto;
 }
 

@@ -16,7 +16,11 @@ const io = socketIo(server, {
     cors: {
         origin: "*",
         methods: ["GET", "POST"]
-    }
+    },
+    transports: ['websocket', 'polling'],
+    allowEIO3: true,
+    pingTimeout: 60000,
+    pingInterval: 25000
 });
 
 const PORT = process.env.PORT || 3000;
@@ -165,12 +169,14 @@ app.get('/api/files', async (req, res) => {
 app.post('/api/files/upload', upload.single('file'), (req, res) => {
     try {
         console.log('Upload request received');
+        console.log('Request body:', req.body);
         console.log('Request body path:', req.body.path);
         console.log('File info:', req.file ? {
             originalname: req.file.originalname,
             filename: req.file.filename,
             size: req.file.size,
-            path: req.file.path
+            path: req.file.path,
+            destination: req.file.destination
         } : 'No file');
         
         if (!req.file) {
@@ -187,12 +193,14 @@ app.post('/api/files/upload', upload.single('file'), (req, res) => {
             return res.status(413).json({ error: 'File too large (max 100MB)' });
         }
         
-        console.log('File uploaded successfully:', req.file.filename);
+        console.log('File uploaded successfully to:', req.file.destination);
+        console.log('File path:', req.file.path);
         res.json({ 
             message: 'File uploaded successfully', 
             path: req.file.path,
             filename: req.file.filename,
-            size: req.file.size
+            size: req.file.size,
+            destination: req.file.destination
         });
     } catch (error) {
         console.error('Upload error:', error);

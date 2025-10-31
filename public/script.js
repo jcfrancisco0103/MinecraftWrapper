@@ -321,8 +321,16 @@ function showTab(tabName) {
 
 function initializeWebSocket() {
     try {
-        // Use Socket.IO instead of native WebSocket
-        socket = io();
+        // Use Socket.IO with better configuration
+        socket = io({
+            transports: ['websocket', 'polling'],
+            timeout: 20000,
+            forceNew: true,
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5,
+            maxReconnectionAttempts: 5
+        });
         
         socket.on('connect', function() {
             console.log('Socket.IO connected');
@@ -348,7 +356,21 @@ function initializeWebSocket() {
         
         socket.on('connect_error', function(error) {
             console.error('Socket.IO connection error:', error);
-            showNotification('Connection error', 'error');
+            showNotification('Connection error: ' + error.message, 'error');
+        });
+        
+        socket.on('reconnect', function(attemptNumber) {
+            console.log('Socket.IO reconnected after', attemptNumber, 'attempts');
+            showNotification('Reconnected to server', 'success');
+        });
+        
+        socket.on('reconnect_error', function(error) {
+            console.error('Socket.IO reconnection error:', error);
+        });
+        
+        socket.on('reconnect_failed', function() {
+            console.error('Socket.IO reconnection failed');
+            showNotification('Failed to reconnect to server', 'error');
         });
         
     } catch (error) {
@@ -637,10 +659,23 @@ async function loadFiles(path = './minecraft-server') {
         });
         
         if (response.ok) {
-            const files = await response.json();
-            displayFiles(files, path);
-            updateFileBreadcrumb(path);
-            currentPath = path;
+            const data = await response.json();
+            // Handle both directory listing and file content responses
+            if (data.items) {
+                // Directory listing response
+                displayFiles(data.items, path);
+                updateFileBreadcrumb(data.currentPath || path);
+                currentPath = data.currentPath || path;
+            } else if (data.isFile) {
+                // File content response - handle appropriately
+                console.log('File content received:', data.path);
+                // You might want to display file content in an editor here
+            } else {
+                // Fallback for old format
+                displayFiles(data, path);
+                updateFileBreadcrumb(path);
+                currentPath = path;
+            }
         } else {
             throw new Error('Failed to load files');
         }
@@ -677,14 +712,15 @@ function displayFiles(files, path) {
     
     // Sort files: directories first, then files
     files.sort((a, b) => {
-        if (a.type !== b.type) {
-            return a.type === 'directory' ? -1 : 1;
+        if (a.isDirectory !== b.isDirectory) {
+            return a.isDirectory ? -1 : 1;
         }
         return a.name.localeCompare(b.name);
     });
-    
+
     files.forEach(file => {
-        const item = createFileItem(file.name, file.type, `${path}/${file.name}`);
+        const fileType = file.isDirectory ? 'directory' : 'file';
+        const item = createFileItem(file.name, fileType, `${path}/${file.name}`);
         fileList.appendChild(item);
     });
 }
@@ -700,13 +736,26 @@ function createFileItem(name, type, fullPath, isParent = false) {
         <i class="${icon}"></i>
         <span>${escapeHtml(displayName)}</span>
         <div class="file-actions">
-            ${!isParent && type === 'file' ? '<button class="btn btn-sm btn-secondary" onclick="openFileEditor(\'' + escapeHtml(fullPath) + '\')"><i class="fas fa-edit"></i></button>' : ''}
+            ${!isParent && type === 'file' ? '<button class="btn btn-sm btn-secondary edit-file-btn"><i class="fas fa-edit"></i></button>' : ''}
         </div>
     `;
     
+    // Add event listeners
     if (type === 'directory' || isParent) {
         item.addEventListener('click', () => loadFiles(fullPath));
         item.style.cursor = 'pointer';
+    }
+    
+    // Add edit button event listener for files
+    if (!isParent && type === 'file') {
+        const editBtn = item.querySelector('.edit-file-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent triggering parent click
+                console.log('Edit button clicked for:', fullPath);
+                openFileEditor(fullPath);
+            });
+        }
     }
     
     return item;
@@ -749,37 +798,72 @@ function updateFileBreadcrumb(path) {
 
 async function openFileEditor(filePath) {
     try {
-        const response = await fetch(`${BASE_URL}/api/files/read?path=${encodeURIComponent(filePath)}`, {
+        console.log('Opening file editor for:', filePath);
+        
+        const response = await fetch(`${BASE_URL}/api/files?path=${encodeURIComponent(filePath)}`, {
             method: 'GET',
             credentials: 'same-origin',
             headers: {
-                'Accept': 'text/plain',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
                 'Cache-Control': 'no-cache'
             }
         });
         
         if (response.ok) {
-            const content = await response.text();
-            showFileEditor(filePath, content);
+            const data = await response.json();
+            console.log('File data received:', data);
+            
+            if (data.isFile && data.content !== undefined) {
+                showFileEditor(filePath, data.content);
+            } else {
+                throw new Error('Invalid file response format');
+            }
         } else {
-            throw new Error('Failed to read file');
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('Failed to read file:', response.status, errorData);
+            throw new Error(errorData.error || 'Failed to read file');
         }
     } catch (error) {
         console.error('Error opening file:', error);
-        showNotification('Failed to open file', 'error');
+        showNotification(`Failed to open file: ${error.message}`, 'error');
     }
 }
 
 function showFileEditor(filePath, content) {
-    const modal = document.getElementById('modal');
-    const modalHeader = modal.querySelector('.modal-header h3');
-    const modalBody = modal.querySelector('.modal-body');
-    const modalFooter = modal.querySelector('.modal-footer');
+    console.log('showFileEditor called with:', filePath, 'content length:', content.length);
     
-    modalHeader.textContent = `Edit: ${filePath.split('/').pop()}`;
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    const modalFooter = document.getElementById('modal-footer');
+    
+    // Check if elements exist
+    if (!modalTitle || !modalBody || !modalFooter) {
+        console.error('Modal elements not found:', { modalTitle, modalBody, modalFooter });
+        showNotification('Error: Modal elements not found', 'error');
+        return;
+    }
+    
+    modalTitle.textContent = `Edit: ${filePath.split('/').pop()}`;
     
     modalBody.innerHTML = `
-        <textarea id="file-editor-content" style="width: 100%; height: 400px; font-family: monospace; font-size: 14px; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-primary); color: var(--text-primary);">${escapeHtml(content)}</textarea>
+        <textarea id="file-editor-content" style="
+            width: 100%; 
+            height: 600px; 
+            font-family: 'Courier New', Consolas, monospace; 
+            font-size: 14px; 
+            line-height: 1.5;
+            padding: 15px; 
+            border: 1px solid var(--border-color); 
+            border-radius: var(--radius-md); 
+            background: var(--bg-primary); 
+            color: var(--text-primary);
+            resize: vertical;
+            tab-size: 4;
+            white-space: pre;
+            overflow-wrap: normal;
+            overflow-x: auto;
+        ">${escapeHtml(content)}</textarea>
     `;
     
     modalFooter.innerHTML = `
@@ -787,14 +871,16 @@ function showFileEditor(filePath, content) {
         <button class="btn btn-primary" onclick="saveFile('${escapeHtml(filePath)}')">Save</button>
     `;
     
+    console.log('Modal content set, calling showModal()');
     showModal();
 }
 
 async function saveFile(filePath) {
     try {
         const content = document.getElementById('file-editor-content').value;
+        console.log('Saving file:', filePath);
         
-        const response = await fetch(`${BASE_URL}/api/files/write`, {
+        const response = await fetch(`${BASE_URL}/api/files/save`, {
             method: 'POST',
             credentials: 'same-origin',
             headers: {
@@ -809,14 +895,18 @@ async function saveFile(filePath) {
         });
         
         if (response.ok) {
+            const result = await response.json();
+            console.log('File saved successfully:', result);
             showNotification('File saved successfully', 'success');
             closeModal();
         } else {
-            throw new Error('Failed to save file');
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('Failed to save file:', response.status, errorData);
+            throw new Error(errorData.error || 'Failed to save file');
         }
     } catch (error) {
         console.error('Error saving file:', error);
-        showNotification('Failed to save file', 'error');
+        showNotification(`Failed to save file: ${error.message}`, 'error');
     }
 }
 
@@ -828,11 +918,21 @@ function uploadFile() {
     input.onchange = async function(e) {
         const files = Array.from(e.target.files);
         
+        if (files.length === 0) {
+            console.log('No files selected');
+            return;
+        }
+        
+        console.log('Selected files:', files.map(f => f.name));
+        console.log('Current path for upload:', currentPath);
+        
         for (const file of files) {
             try {
+                console.log(`Uploading file: ${file.name} to path: ${currentPath}`);
+                
                 const formData = new FormData();
                 formData.append('file', file);
-                formData.append('path', currentPath);
+                formData.append('path', currentPath || './minecraft-server');
                 
                 const response = await fetch(`${BASE_URL}/api/files/upload`, {
                     method: 'POST',
@@ -840,19 +940,26 @@ function uploadFile() {
                     body: formData
                 });
                 
+                console.log('Upload response status:', response.status);
+                
                 if (response.ok) {
+                    const result = await response.json();
+                    console.log('Upload successful:', result);
                     showNotification(`${file.name} uploaded successfully`, 'success');
                 } else {
-                    throw new Error(`Failed to upload ${file.name}`);
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    console.error('Upload failed:', response.status, errorData);
+                    throw new Error(errorData.error || `Failed to upload ${file.name}`);
                 }
             } catch (error) {
                 console.error('Error uploading file:', error);
-                showNotification(`Failed to upload ${file.name}`, 'error');
+                showNotification(`Failed to upload ${file.name}: ${error.message}`, 'error');
             }
         }
         
         // Refresh file list
-        loadFiles(currentPath);
+        console.log('Refreshing file list after upload');
+        loadFiles(currentPath || './minecraft-server');
     };
     
     input.click();
@@ -1066,16 +1173,24 @@ function showNotification(message, type = 'info') {
 }
 
 function showModal() {
-    const modal = document.getElementById('modal');
-    if (modal) {
-        modal.classList.add('active');
+    console.log('showModal called');
+    const modalOverlay = document.getElementById('modal-overlay');
+    if (modalOverlay) {
+        modalOverlay.classList.add('active');
+        console.log('Modal overlay shown');
+    } else {
+        console.error('Modal overlay not found');
     }
 }
 
 function closeModal() {
-    const modal = document.getElementById('modal');
-    if (modal) {
-        modal.classList.remove('active');
+    console.log('closeModal called');
+    const modalOverlay = document.getElementById('modal-overlay');
+    if (modalOverlay) {
+        modalOverlay.classList.remove('active');
+        console.log('Modal overlay hidden');
+    } else {
+        console.error('Modal overlay not found');
     }
 }
 
