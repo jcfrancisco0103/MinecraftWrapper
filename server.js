@@ -326,10 +326,14 @@ app.post('/api/server/config', (req, res) => {
 
 // Server management routes
 app.post('/api/server/start', (req, res) => {
+    console.log('POST /api/server/start called, current status:', serverStatus);
+    
     if (serverStatus !== 'stopped') {
+        console.log('Server start rejected - status is not stopped');
         return res.status(400).json({ error: 'Server is already running or starting' });
     }
     
+    console.log('Calling startMinecraftServer()...');
     startMinecraftServer();
     res.json({ message: 'Starting Minecraft server...' });
 });
@@ -439,7 +443,12 @@ app.get('/api/system', async (req, res) => {
 
 // Minecraft server management functions
 function startMinecraftServer() {
+    console.log('startMinecraftServer() called');
+    io.emit('consoleOutput', { type: 'system', data: 'Starting Minecraft server...' });
+    
     if (minecraftProcess) {
+        console.log('Server already running, ignoring start request');
+        io.emit('consoleOutput', { type: 'warning', data: 'Server is already running!' });
         return;
     }
     
@@ -459,14 +468,32 @@ function startMinecraftServer() {
     ];
     
     console.log(`Starting Minecraft server with ${ramAmount} RAM, Aikar flags: ${useAikar}`);
+    console.log('Java command:', 'java', javaArgs.join(' '));
+    console.log('Working directory:', serverPath);
     
-    minecraftProcess = spawn('java', javaArgs, {
-        cwd: serverPath,
-        stdio: ['pipe', 'pipe', 'pipe']
-    });
+    io.emit('consoleOutput', { type: 'system', data: `Starting with ${ramAmount} RAM...` });
+    io.emit('consoleOutput', { type: 'system', data: `Command: java ${javaArgs.join(' ')}` });
+    
+    try {
+        minecraftProcess = spawn('java', javaArgs, {
+            cwd: serverPath,
+            stdio: ['pipe', 'pipe', 'pipe']
+        });
+        
+        console.log('Minecraft process spawned with PID:', minecraftProcess.pid);
+        io.emit('consoleOutput', { type: 'system', data: `Process started with PID: ${minecraftProcess.pid}` });
+        
+    } catch (error) {
+        console.error('Error spawning Minecraft process:', error);
+        io.emit('consoleOutput', { type: 'error', data: `Failed to start: ${error.message}` });
+        serverStatus = 'error';
+        io.emit('serverStatus', { status: serverStatus });
+        return;
+    }
     
     minecraftProcess.stdout.on('data', (data) => {
         const output = data.toString();
+        console.log('Minecraft stdout:', output);
         io.emit('consoleOutput', { type: 'stdout', data: output });
         
         if (output.includes('Done (') && output.includes('s)! For help, type "help"')) {
@@ -477,10 +504,12 @@ function startMinecraftServer() {
     
     minecraftProcess.stderr.on('data', (data) => {
         const output = data.toString();
+        console.log('Minecraft stderr:', output);
         io.emit('consoleOutput', { type: 'stderr', data: output });
     });
     
     minecraftProcess.on('close', (code) => {
+        console.log('Minecraft process closed with code:', code);
         serverStatus = 'stopped';
         minecraftProcess = null;
         io.emit('serverStatus', { status: serverStatus });
@@ -488,6 +517,7 @@ function startMinecraftServer() {
     });
     
     minecraftProcess.on('error', (error) => {
+        console.error('Minecraft process error:', error);
         serverStatus = 'error';
         io.emit('serverStatus', { status: serverStatus });
         io.emit('consoleOutput', { type: 'error', data: `Error: ${error.message}` });
