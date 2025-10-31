@@ -663,8 +663,22 @@ io.on('connection', (socket) => {
     // Send current server status
     socket.emit('serverStatus', { status: serverStatus });
     
+    // Send welcome message to console
+    socket.emit('consoleOutput', { 
+        type: 'system', 
+        data: 'Connected to MinecraftWrapper console. Ready to receive server output.' 
+    });
+    
     socket.on('sendCommand', (data) => {
         sendCommand(data.command);
+    });
+    
+    socket.on('requestStatus', () => {
+        socket.emit('serverStatus', { status: serverStatus });
+        socket.emit('consoleOutput', { 
+            type: 'system', 
+            data: `Current server status: ${serverStatus}` 
+        });
     });
     
     socket.on('disconnect', () => {

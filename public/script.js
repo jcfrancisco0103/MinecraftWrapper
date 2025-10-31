@@ -333,8 +333,10 @@ function initializeWebSocket() {
         });
         
         socket.on('connect', function() {
-            console.log('Socket.IO connected');
+            console.log('Socket.IO connected successfully');
             showNotification('Connected to server', 'success');
+            // Request current server status
+            socket.emit('requestStatus');
         });
         
         socket.on('serverStatus', function(data) {
@@ -342,7 +344,10 @@ function initializeWebSocket() {
         });
         
         socket.on('consoleOutput', function(data) {
-            appendConsoleOutput(data.message, data.level);
+            console.log('Received console output:', data); // Debug log
+            const message = data.data || data.message || 'Unknown message';
+            const level = data.type || data.level || 'info';
+            appendConsoleOutput(message, level);
         });
         
         socket.on('systemInfo', function(data) {
@@ -383,6 +388,9 @@ function initializeWebSocket() {
 // Server Control Functions
 async function startServer() {
     try {
+        console.log('Starting server...');
+        appendConsoleOutput('Sending start command to server...', 'system');
+        
         const response = await fetch(`${BASE_URL}/api/server/start`, {
             method: 'POST',
             credentials: 'same-origin',
@@ -394,13 +402,20 @@ async function startServer() {
         });
         
         if (response.ok) {
+            const result = await response.json();
+            console.log('Server start response:', result);
+            appendConsoleOutput('Server start command sent successfully', 'success');
             showNotification('Server start command sent', 'success');
             updateServerStatusUI('starting');
         } else {
+            const result = await response.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('Server start error:', result);
+            appendConsoleOutput(`Error starting server: ${result.error}`, 'error');
             throw new Error('Failed to start server');
         }
     } catch (error) {
         console.error('Error starting server:', error);
+        appendConsoleOutput(`Failed to start server: ${error.message}`, 'error');
         showNotification('Failed to start server', 'error');
     }
 }
